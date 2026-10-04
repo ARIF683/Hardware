@@ -1,0 +1,1387 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Stock Manager</title>
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#4c6fff">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Stock">
+<link rel="icon" href="/icon-192.png">
+<link rel="apple-touch-icon" href="/icon-192.png">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" crossorigin="anonymous"></script>
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);--bg:#fff;--card:#f3f4f6;--tx:#14171f;--mut:#6b7280;--bd:#eceef2;--ac:#4c6fff;--bad:#ef4444;--ok:#16a34a;--warn:#f59e0b}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#12141a;--card:#1e222b;--tx:#eef0f5;--mut:#9aa3b2;--bd:#2a2f3a;--ac:#7b93ff;--bad:#f87171;--ok:#4ade80;--warn:#fbbf24}}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+.no-sel,.no-sel *{-webkit-user-select:none;-moz-user-select:none;-ms-user-select:none;user-select:none;-webkit-touch-callout:none}
+body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.4 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+#app{max-width:560px;margin:0 auto;padding-bottom:150px}
+button,input,select,textarea{font:inherit;color:var(--tx)}button{cursor:pointer;background:none;border:0}
+.top{position:sticky;top:env(safe-area-inset-top,0px);background:var(--bg);display:grid;grid-template-columns:48px 1fr 48px;align-items:center;padding:12px 8px;z-index:5;text-align:center}
+.top b{font-size:18px}.top button{font-size:26px;padding:4px 8px;line-height:1}
+.pad{padding:0 16px}
+.search{width:100%;background:var(--card);border:0;border-radius:12px;padding:12px 14px;margin-bottom:10px;outline:0}
+.chips{display:flex;gap:8px;align-items:center;margin-bottom:6px;flex-wrap:wrap}
+.chip{border:1px solid var(--bd);border-radius:10px;padding:8px 12px;font-size:15px;white-space:nowrap}
+.chip.on{border-color:var(--ac);color:var(--ac);background:color-mix(in srgb,var(--ac) 10%,transparent)}
+.sp{flex:1}.srt{font-size:24px;color:var(--mut);padding:4px 8px}
+.it{display:flex;gap:14px;align-items:flex-start;padding:14px 0}
+.th{width:56px;height:56px;border-radius:10px;background:var(--card);flex:none}
+.mid{flex:1;min-width:0}.nm{font-size:17px;word-break:break-word}
+.sub{color:var(--mut);font-size:14px;margin-top:4px}
+.sub i{display:inline-block;width:1px;height:12px;background:var(--bd);margin:0 7px;vertical-align:middle}
+.q{color:var(--ac);font-weight:700;font-size:22px;text-align:right}
+.q.neg{color:var(--bad)}.q small{font-size:12px;color:var(--mut);font-weight:400;display:block}
+.ck{width:22px;height:22px;border:2px solid var(--bd);border-radius:50%;flex:none;margin-top:16px}.ck.on{background:var(--ac);border-color:var(--ac)}
+.gc{background:var(--bg);border:1px solid var(--bd);box-shadow:0 2px 8px rgba(0,0,0,.05);border-radius:14px;padding:16px;margin:12px 0}
+.gh{display:flex;justify-content:space-between;align-items:center}.gh b{font-size:19px}
+.gh span{color:#fff;border-radius:99px;padding:3px 14px;font-size:15px}
+.gs{display:flex;justify-content:space-around;margin-top:14px;text-align:center}
+.gs b{display:block;font-size:24px}.gs small{color:var(--mut)}
+.gap{height:10px;background:var(--card)}
+.kv{display:flex;justify-content:space-between;gap:16px;padding:18px 16px;border-bottom:1px solid var(--bd)}
+.kv span{color:var(--mut)}.kv b{font-weight:400;text-align:right;word-break:break-word}
+.head{display:flex;gap:16px;padding:16px;align-items:flex-start}.head .th{width:84px;height:84px}.head b{font-size:20px}
+nav{position:fixed;left:0;right:0;bottom:0;background:var(--bg);border-top:1px solid var(--bd);padding-bottom:env(safe-area-inset-bottom,0px);z-index:6}
+nav div{max-width:560px;margin:0 auto;display:flex}
+nav button{flex:1;padding:8px 0 6px;font-size:12px;color:var(--mut);-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}nav button.on{color:var(--ac)}nav u{display:block;text-decoration:none;font-size:22px}
+.bb,.sb{position:fixed;left:0;right:0;background:var(--bg);border-top:1px solid var(--bd);z-index:7}
+.bb{bottom:0;padding:12px 16px calc(12px + env(safe-area-inset-bottom,0px))}
+.sb{bottom:calc(62px + env(safe-area-inset-bottom,0px));padding:10px 16px}
+.bb>div,.sb>div{max-width:560px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.b1{background:var(--ac);color:#fff;border-radius:12px;padding:14px 28px;font-weight:600}
+.b1:disabled{opacity:.5}
+.b2{border:1px solid var(--bd);border-radius:10px;padding:10px 14px}.dng{color:var(--bad)}
+.bq{font-size:30px;font-weight:700;color:var(--ac)}.bq small{font-size:14px;color:var(--mut);font-weight:400}
+.bl{color:var(--mut);font-size:13px}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px}.st{background:var(--card);border-radius:12px;padding:12px}
+.st b{display:block;font-size:19px}.st span{color:var(--mut);font-size:13px}
+h4{margin:20px 0 4px}
+.empty{text-align:center;color:var(--mut);padding:40px 0}
+.row{display:flex;justify-content:space-between;align-items:center;padding:18px 16px;border-bottom:1px solid var(--bd)}
+.tx{padding:14px 16px;border-bottom:1px solid var(--bd);display:flex;justify-content:space-between;gap:10px}
+.in{color:var(--ok);font-weight:700}.out{color:var(--bad);font-weight:700}
+dialog{margin:auto auto 0;width:100%;max-width:560px;border:0;border-radius:18px 18px 0 0;padding:18px 18px calc(18px + env(safe-area-inset-bottom,0px));background:var(--bg);color:var(--tx);max-height:90vh;overflow:auto}
+dialog::backdrop{background:rgba(0,0,0,.5)}
+dialog h3{margin:0 0 8px}
+.op{display:flex;justify-content:space-between;padding:16px 4px;border-bottom:1px solid var(--bd);font-size:17px}.op span{color:var(--ac)}
+label{display:block;font-size:13px;color:var(--mut);margin-top:12px}
+dialog input,dialog select{width:100%;background:var(--card);border:0;border-radius:10px;padding:12px;margin-top:4px}
+.ac{display:flex;gap:8px;justify-content:flex-end;margin-top:18px}
+.seg{display:flex;gap:6px;margin-top:8px}.seg button{flex:1;padding:12px;border-radius:10px;background:var(--card)}.seg .on{background:var(--ac);color:#fff}
+.note{color:var(--mut);font-size:13px}
+#toast{position:fixed;inset:auto;left:50%;bottom:calc(90px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);margin:0;border:0;background:#222;color:#fff;padding:10px 16px;border-radius:10px;max-width:90vw;font-size:14px;text-align:center;z-index:99}#toast:empty{display:none}
+textarea{width:100%;height:110px;margin-top:12px;background:var(--card);color:var(--tx);border:0;border-radius:10px;padding:10px;font-size:12px}
+input.pk{cursor:pointer;background:var(--card) url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8'><path d='M1 1l5 5 5-5' fill='none' stroke='%236b7280' stroke-width='2'/></svg>") no-repeat right 14px center!important}
+.pill{display:inline-block;font-size:11px;padding:2px 8px;border-radius:99px;background:var(--card);color:var(--mut);margin-left:6px}
+.pill.on{background:color-mix(in srgb,var(--ok) 20%,transparent);color:var(--ok)}
+.pill.warn{background:color-mix(in srgb,var(--bad) 20%,transparent);color:var(--bad)}
+.crash{padding:24px;text-align:center;margin:40px auto;max-width:420px}
+.crash h2{color:var(--bad)}
+.crash pre{background:var(--card);padding:12px;border-radius:10px;font-size:12px;text-align:left;overflow:auto;max-height:200px;white-space:pre-wrap;word-break:break-word}
+.admin-badge{display:inline-block;font-size:10px;padding:1px 6px;border-radius:99px;background:color-mix(in srgb,var(--ac) 25%,transparent);color:var(--ac);margin-left:6px;vertical-align:middle}
+.bl-card{background:var(--card);border-radius:14px;padding:14px;margin-bottom:12px;border:2px solid transparent;position:relative}
+.bl-card.warn{border-color:var(--warn)}
+.bl-card.skip{opacity:.45}
+.bl-hd{display:flex;gap:10px;align-items:flex-start}
+.bl-hd input[type=checkbox]{width:22px;height:22px;flex:none;margin:0;accent-color:var(--ac);margin-top:22px}
+.bl-line{display:flex;gap:8px;align-items:center;margin-top:6px;flex-wrap:wrap}
+.bl-line input[type=number]{width:84px;background:var(--bg);border:1px solid var(--bd);border-radius:8px;padding:8px;margin:0}
+.bl-line .pick{flex:1;min-width:120px;background:var(--bg);border:1px solid var(--bd);border-radius:8px;padding:10px;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bl-line .pick.warn{border-color:var(--warn)}
+.bl-line .pick.bad{border-color:var(--bad)}
+.tot{display:flex;justify-content:space-between;padding:12px 0;font-weight:600;border-top:1px solid var(--bd);margin-top:8px}
+.bl-fields{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+.bl-fields label{margin-top:0;font-size:12px}
+.bl-fields input{background:var(--bg);border:1px solid var(--bd);border-radius:8px;padding:8px;font-size:14px;margin-top:2px}
+.bl-fields .pick{width:100%;background:var(--bg);border:1px solid var(--bd);border-radius:8px;padding:8px;font-size:14px;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:2px}
+.bl-fields .pick:active{border-color:var(--ac)}
+.bill-thumb{position:sticky;top:env(safe-area-inset-top,0px);z-index:4;background:var(--bg);padding:8px 0 12px;margin-bottom:4px}
+.bill-thumb img{width:100%;max-height:220px;object-fit:contain;border-radius:12px;background:#000;display:block;cursor:pointer}
+.bill-thumb .note{text-align:center;margin-top:6px}
+.bill-hd-card{background:var(--card)!important}
+.bill-hd-card label{color:var(--tx);font-weight:600;margin-top:10px}
+.bill-hd-card label:first-child{margin-top:0}
+.bill-hd-card input{background:var(--bg)!important;color:var(--tx)!important;border:1px solid var(--bd)!important}
+.bl-name-pick{width:100%;background:var(--bg);border:1px solid var(--bd);border-radius:8px;color:var(--tx);font-weight:600;font-size:15px;padding:10px;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bl-name-pick:active{border-color:var(--ac)}
+.bl-name-pick.ph{color:var(--mut);font-weight:400}
+.bl-del{position:absolute;top:8px;right:8px;width:32px;height:32px;border-radius:50%;background:var(--bg);border:1px solid var(--bd);color:var(--bad);font-size:18px;line-height:1;display:flex;align-items:center;justify-content:center;z-index:2}
+.bl-del:active{background:color-mix(in srgb,var(--bad) 15%,transparent)}
+.review-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
+.review-head .calc{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:10px 14px;font-size:20px;line-height:1;display:flex;align-items:center;gap:6px}
+.review-head .calc:active{background:color-mix(in srgb,var(--ac) 15%,transparent)}
+.calc-disp{background:var(--card);border-radius:12px;padding:16px;text-align:right;font-size:28px;font-weight:700;min-height:52px;word-break:break-all}
+.calc-row{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-top:8px}
+.calc-row button{background:var(--card);border-radius:10px;padding:16px 0;font-size:20px;font-weight:600}
+.calc-row button.op{color:var(--ac)}
+.calc-row button.eq{background:var(--ac);color:#fff}
+.calc-row button.del{color:var(--bad)}
+</style></head><body>
+<div id="app"></div>
+<nav id="nav"><div>
+<button data-t="home" onclick="go('home')"><u>🏠</u>Home</button>
+<button data-t="items" onclick="go('items')"><u>📦</u>Items</button>
+<button data-t="tx" onclick="go('tx')"><u>⇅</u>Transactions</button>
+<button data-t="set" id="setBtn" onpointerdown="gearDown()" onpointerup="gearUp()" onpointercancel="gearUp()" onpointerleave="gearUp()" onclick="go('set')"><u>⚙️</u>Settings</button>
+</div></nav>
+<dialog id="sh"></dialog>
+<div id="toast" popover="manual"></div>
+<script>
+const $=id=>document.getElementById(id);
+const K='hw_stock_v3';
+const K_QUEUE='hw_stock_queue_v1';
+const K_ADMIN='hw_stock_admin_v1';
+const SB_URL='https://xkjvcufajsyqbzjjllma.supabase.co';
+const SB_KEY='sb_publishable_sXokssWnrTPWROtmfHjoWA_LRqVPt8V';
+const UNITS=['pcs','kg','g','L','ml','box','pack','bag','m','ft','cm','set','pair','dozen','roll','sheet'];
+const ADMIN_HASH='2f03a273df7e7fc706f021d3722238fcceda044783a8c9082087b8b941de8c3e';
+let items=[],hist=[],queue=[];
+let sbStat='Connecting…',sbWarn=false;
+let rtChannel=null,rtOk=false,rtDelay=5000;
+let lastCrash=null;
+let isAdmin=false;
+try{isAdmin=localStorage.getItem(K_ADMIN)==='1'}catch(e){}
+try{
+const d=JSON.parse(
+localStorage.getItem(K) ||
+localStorage.getItem('hw_stock_v2') ||
+localStorage.getItem('hw_stock_v1') ||
+'null'
+);
+if(Array.isArray(d))items=d;
+else if(d){items=d.items||[];hist=d.hist||[]}
+}catch(e){}
+try{queue=JSON.parse(localStorage.getItem(K_QUEUE)||'[]')}catch(e){queue=[]}
+try{localStorage.removeItem('hw_ocr_key_v1')}catch(e){}
+queue.forEach(q=>{q.id=q.id||Date.now().toString(36)+Math.random().toString(36).slice(2,6)});
+items.forEach((i,k)=>{
+i.type=i.type||i.cat||'';i.brand=i.brand||'';i.size=i.size||'';i.barcode=i.barcode||'';
+i.code=i.code||'';i.mrp=i.mrp??'';i.unit=i.unit||'pcs';i.aliases=i.aliases||'';
+if(i.o==null)i.o=k;i.qty=+i.qty||0;i.cost=+i.cost||0;i.price=+i.price||0;i.low=+i.low||0;
+if(!i.updated_at)i.updated_at=new Date().toISOString();
+});
+const persist=()=>{
+try{localStorage.setItem(K,JSON.stringify({items,hist}))}catch(e){}
+try{localStorage.setItem(K_QUEUE,JSON.stringify(queue))}catch(e){}
+};
+function num(v){
+if(v==null)return 0;
+const s=String(v).replace(/[^\d.\-]/g,'');
+if(s===''||s==='-'||s==='.')return 0;
+const n=parseFloat(s);
+return isNaN(n)?0:n;
+}
+function validNum(v){
+const s=String(v??'').trim();
+if(s==='')return true;
+return !isNaN(parseFloat(s.replace(/[^\d.\-]/g,'')))&&/^-?\d+(\.\d+)?$/.test(s.replace(/,/g,''));
+}
+let gearLongTimer=null;
+function gearDown(){
+clearTimeout(gearLongTimer);
+gearLongTimer=setTimeout(()=>{if(!isAdmin)promptAdmin()},1500);
+}
+function gearUp(){if(gearLongTimer){clearTimeout(gearLongTimer);gearLongTimer=null}}
+function promptAdmin(){
+if(isAdmin){toast('Already in admin mode');return}
+AK=null;
+open(`<h3>Admin access</h3>
+<p class="note">Enter the admin PIN to reveal restricted actions.</p>
+<input id="apin" type="password" placeholder="PIN" autocomplete="off">
+<div class="ac"><button class="b2" onclick="closeSh()">Cancel</button>
+<button class="b1" onclick="submitAdminPin()">Unlock</button></div>`);
+setTimeout(()=>{const e=$('apin');if(e)e.focus()},100);
+}
+async function submitAdminPin(){
+const v=$('apin').value||'';
+if(!v)return toast('Enter PIN');
+try{
+const buf=new TextEncoder().encode(v);
+const hash=await crypto.subtle.digest('SHA-256',buf);
+const h=[...new Uint8Array(hash)].map(b=>b.toString(16).padStart(2,'0')).join('');
+if(h===ADMIN_HASH){
+isAdmin=true;try{localStorage.setItem(K_ADMIN,'1')}catch(e){}
+closeSh();toast('Admin mode on');render();
+}else{
+toast('Wrong PIN');
+const e=$('apin');if(e)e.value='';
+}
+}catch(err){toast('PIN check failed: '+(err.message||err))}
+}
+let gearTapCount=0,gearTapTimer=null;
+function gearTap(){
+if(!isAdmin)return;
+gearTapCount++;
+clearTimeout(gearTapTimer);
+gearTapTimer=setTimeout(()=>{gearTapCount=0},700);
+if(gearTapCount>=3){
+gearTapCount=0;isAdmin=false;
+try{localStorage.removeItem(K_ADMIN)}catch(e){}
+toast('Admin mode off');render();
+}
+}
+const sbHeaders=extra=>({apikey:SB_KEY,'Content-Type':'application/json',...extra});
+let flushing=false;
+function enqueue(op){queue.push({...op,id:uid(),ts:Date.now()});persist();flush()}
+async function runOp(op){
+const chk=async r=>{if(!r.ok)throw new Error((await r.text()).slice(0,200))},U=SB_URL+'/rest/v1/';
+if(op.type==='upsert'){for(let k=0;k<op.rows.length;k+=300)await chk(await fetch(U+'items?on_conflict=id',{method:'POST',headers:sbHeaders({Prefer:'resolution=merge-duplicates,return=minimal'}),body:JSON.stringify(op.rows.slice(k,k+300).map(toDB))}))}
+else if(op.type==='patch'){for(const {id,patch} of op.rows)await chk(await fetch(U+'items?id=eq.'+encodeURIComponent(id),{method:'PATCH',headers:sbHeaders({Prefer:'return=minimal'}),body:JSON.stringify(patch)}))}
+else if(op.type==='delete'){for(let k=0;k<op.ids.length;k+=80)await chk(await fetch(U+'items?id=in.('+op.ids.slice(k,k+80).join(',')+')',{method:'DELETE',headers:sbHeaders()}))}
+else if(op.type==='deleteAll')await chk(await fetch(U+'items?id=not.is.null',{method:'DELETE',headers:sbHeaders()}));
+else if(op.type==='tx')await chk(await fetch(U+'transactions?on_conflict=client_id',{method:'POST',headers:sbHeaders({Prefer:'resolution=ignore-duplicates,return=minimal'}),body:JSON.stringify(op.rows)}));
+else if(op.type==='clearTx')await chk(await fetch(U+'transactions?id=not.is.null',{method:'DELETE',headers:sbHeaders()}));
+else if(op.type==='purchase')await chk(await fetch(U+'purchases?on_conflict=client_id',{method:'POST',headers:sbHeaders({Prefer:'resolution=ignore-duplicates,return=minimal'}),body:JSON.stringify(op.row)}));
+}
+async function flush(){
+if(flushing||!queue.length)return;
+if(!navigator.onLine){setStat('Offline · '+queue.length+' pending');return}
+flushing=true;
+try{
+while(queue.length){const op=queue[0];await runOp(op);queue=queue.filter(q=>q.id!==op.id);persist();setStat('Syncing… '+queue.length+' left')}
+sbWarn=false;setStat('Synced ✓');
+}catch(e){
+console.error(e);
+if(!sbWarn){sbWarn=true;toast('Sync failed, will retry. '+(e.message||e))}
+setStat('Pending '+queue.length+' · retrying');setTimeout(flush,15000);
+}finally{
+flushing=false;
+if(!isDialogOpen())render();
+}
+}
+function isDialogOpen(){const d=$('sh'),a=document.activeElement;return !!((d&&d.open)||(a&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)))}
+function setStat(t){
+sbStat=t;
+const e=$('sbs');if(e)e.textContent=t;
+const p=$('pend');if(p){p.textContent=queue.length?queue.length+' pending':'';
+p.className='pill '+(queue.length?'warn':'on')}
+const r=$('rts');if(r){r.textContent=rtOk?'Live ✓':'Off';r.className='pill '+(rtOk?'on':'warn')}
+}
+window.addEventListener('online',()=>{setStat('Online');flush()});
+window.addEventListener('offline',()=>setStat('Offline'));
+function toDB(i){
+return {
+id:i.id,o:i.o,name:i.name,code:i.code,barcode:i.barcode,
+type:i.type,brand:i.brand,size:i.size,aliases:i.aliases||'',
+mrp:i.mrp===''||i.mrp==null?null:+i.mrp,
+cost:i.cost,price:i.price,qty:i.qty,low:i.low,unit:i.unit||'pcs',
+updated_at:i.updated_at||new Date().toISOString()
+};
+}
+function fromDB(r){return {...r,mrp:r.mrp??'',unit:r.unit||'pcs',aliases:r.aliases||''}}
+async function sbGet(path){
+const r=await fetch(SB_URL+'/rest/v1/'+path,{headers:sbHeaders()});
+if(!r.ok)throw new Error((await r.text()).slice(0,200));
+return r.json();
+}
+async function dbLoad(){
+setStat('Loading…');
+try{
+let all=[],k=0;
+for(;;){
+const a=await sbGet('items?select=*&order=o.asc&limit=1000&offset='+k);
+all=all.concat(a);if(a.length<1000)break;k+=1000;
+}
+const th=await sbGet('transactions?select=*&order=created_at.desc&limit=500');
+hist=th.map(r=>({
+id:r.item_id,t:Date.parse(r.created_at),n:r.item_name,
+a:r.action,q:r.qty,b:r.balance,note:r.note,unit:r.unit||''
+}));
+if(!all.length&&items.length){
+ask('Upload to database?',
+'The database is empty. Upload the '+items.length+' items saved in this browser?',
+'Upload',()=>{enqueue({type:'upsert',rows:items});flush()});
+}else{
+const pendingIds=new Set(
+queue.filter(q=>q.type==='upsert')
+.flatMap(q=>q.rows.map(r=>r.id))
+);
+const localPending=items.filter(i=>pendingIds.has(i.id));
+const dbMap=new Map(all.map(fromDB).map(i=>[i.id,i]));
+localPending.forEach(i=>dbMap.set(i.id,i));
+items=[...dbMap.values()].sort((a,b)=>a.o-b.o);
+}
+persist();sbWarn=false;setStat('Synced ✓');render();
+flush();
+startRealtime();
+}catch(e){
+console.error(e);
+const bl=/fetch|network|load failed/i.test(e.message||'');
+if(bl)e={message:'this page is blocked from reaching the database. Open the downloaded file in your normal browser (Chrome) instead'};
+setStat('Not saved to database ✗ — '+(e.message||e));
+if(!sbWarn){sbWarn=true;toast('Database not reachable. Changes are saved in this browser only. Retry from Settings.')}
+}
+}
+function retrySync(){
+if(!queue.length){toast('Nothing pending — already in sync.');flush();return}
+toast('Retrying '+queue.length+' pending…');
+flush();
+}
+function startRealtime(){
+if(rtChannel)return;
+const url=SB_URL.replace('https://','wss://')+'/realtime/v1/websocket?apikey='+SB_KEY+'&vsn=1.0.0';
+let ws;
+try{ws=new WebSocket(url)}catch(e){return}
+const topic='realtime:public:items';
+const joinRef=uid();
+const send=m=>ws.readyState===1&&ws.send(JSON.stringify(m));
+ws.onopen=()=>{
+send({topic,event:'phx_join',
+payload:{config:{broadcast:{self:false},presence:{key:''},
+postgres_changes:[{event:'*',schema:'public',table:'items'}]}},
+ref:joinRef});
+ws._hb=setInterval(()=>send({topic:'phoenix',event:'heartbeat',payload:{},ref:uid()}),25000);
+};
+ws.onmessage=e=>{
+let m;try{m=JSON.parse(e.data)}catch(_){return}
+if(m.event==='phx_reply'&&m.payload&&m.payload.status==='ok'){rtOk=true;rtDelay=5000;if(!isDialogOpen())render()}
+if(m.event==='postgres_changes'){
+const p=m.payload?.data?.record||m.payload?.record;
+const oldRec=m.payload?.data?.old_record||m.payload?.old_record;
+const type=m.payload?.data?.type||m.payload?.type;
+if(!p&&!oldRec)return;
+if(S.edit&&(p?.id===S.edit||oldRec?.id===S.edit))return;
+const targetId=p?.id||oldRec?.id;
+const hasPending=queue.some(q=>{
+if(q.type==='upsert')return q.rows.some(r=>r.id===targetId);
+if(q.type==='patch')return q.rows.some(r=>r.id===targetId);
+if(q.type==='delete')return q.ids.includes(targetId);
+return false;
+});
+if(hasPending)return;
+if(type==='INSERT'||type==='UPDATE'){
+const incoming=fromDB(p);
+const idx=items.findIndex(x=>x.id===incoming.id);
+if(idx>=0){
+const local=items[idx];
+const localTs=Date.parse(local.updated_at||0)||0;
+const incTs=Date.parse(incoming.updated_at||0)||0;
+items[idx]=incTs>=localTs?{...local,...incoming}:{...incoming,...local};
+}else{
+items.push(incoming);
+}
+items.sort((a,b)=>a.o-b.o);
+persist();
+if(!isDialogOpen())render();
+}else if(type==='DELETE'){
+const id=p?.id||oldRec?.id;
+if(id){items=items.filter(x=>x.id!==id);persist();if(!isDialogOpen())render()}
+}
+}
+};
+ws.onclose=()=>{clearInterval(ws._hb);rtOk=false;rtChannel=null;setStat(sbStat);setTimeout(startRealtime,rtDelay);rtDelay=Math.min(rtDelay*2,60000)};
+ws.onerror=()=>{};
+rtChannel=ws;
+}
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+const uuid=()=>{
+if(crypto&&crypto.randomUUID)return crypto.randomUUID();
+return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{
+const r=Math.random()*16|0,v=c=='x'?r:(r&0x3|0x8);return v.toString(16);
+});
+};
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fm=n=>'₹'+(+n||0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});
+const lo=i=>i.qty<0||(i.low>0&&i.qty<=i.low);
+const uShort=u=>u==='pcs'?'':u;
+const BILL={stage:'idle',supplier:'',bill_no:'',bill_date:'',rows:[],
+error:'',imgData:'',imgMime:''};
+function billScr(){
+if(BILL.stage==='review')return billReview();
+return billIdle();
+}
+function billIdle(){
+return `<div class="top"><button onclick="closeBill()">‹</button><b>Bill</b><span></span></div>
+<div class="pad">
+<div class="gc">
+<b>📷 Bill image</b>
+<p class="note" style="margin:6px 0 10px">Take a photo or pick from gallery, then tap <b>Continue</b>. You'll enter the items by hand while looking at the picture.</p>
+<div class="ac" style="justify-content:flex-start;margin-top:0;flex-wrap:wrap">
+<label class="b1" style="display:inline-block;text-align:center;margin:0;position:relative;overflow:hidden">
+📷 Camera
+<input type="file" accept="image/*" capture="environment" onchange="billPick(this.files[0])" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0">
+</label>
+<label class="b2" style="display:inline-block;text-align:center;margin:0;position:relative;overflow:hidden">
+🖼 Gallery
+<input type="file" accept="image/*" onchange="billPick(this.files[0])" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0">
+</label>
+${BILL.imgData?`<button class="b2" onclick="BILL.imgData='';BILL.imgMime='';BILL.error='';render()">Remove</button>`:''}
+</div>
+${BILL.imgData?`<div style="margin-top:12px"><img src="${BILL.imgData}" style="width:100%;border-radius:10px;max-height:260px;object-fit:contain;background:#000"></div>`:''}
+${BILL.imgData?`<div class="ac" style="justify-content:flex-start;margin-top:10px">
+<button class="b1" onclick="billContinue()">Continue →</button>
+</div>`:''}
+</div>
+${BILL.error?`<div class="gc" style="border-color:var(--bad)"><b style="color:var(--bad)">Error</b>
+<p class="note" style="margin:8px 0 0;word-break:break-word">${esc(BILL.error)}</p></div>`:''}
+<div class="gc">
+<b>No image?</b>
+<p class="note" style="margin:6px 0 10px">You can skip the photo and just enter rows directly. Useful if you already know the prices.</p>
+<button class="b2" onclick="billContinue()">Enter items without a photo →</button>
+</div>
+<div class="ac" style="justify-content:space-between">
+<button class="b2" onclick="closeBill()">Cancel</button>
+</div>
+</div>`;
+}
+function closeBill(){
+BILL.stage='idle';
+BILL.imgData='';BILL.imgMime='';BILL.error='';
+BILL.rows=[];BILL.supplier='';BILL.bill_no='';BILL.bill_date='';
+S.screen=null;render();
+}
+function billPick(f){
+if(!f)return;
+if(!f.type.startsWith('image/')){BILL.error='Please choose an image.';return render()}
+const r=new FileReader();
+r.onload=()=>{
+BILL.imgData=r.result;
+BILL.imgMime=f.type||'image/jpeg';
+BILL.error='';
+render();
+};
+r.onerror=()=>{BILL.error='Could not read file.';render()};
+r.readAsDataURL(f);
+}
+function billContinue(){
+if(!BILL.rows.length){
+BILL.rows.push(newBillRow());
+}
+BILL.stage='review';
+render();
+scrollTo(0,0);
+}
+function newBillRow(){
+return {include:true,qty:1,name:'',rate:0,
+matched:null,create:false,openPick:false,
+type:'',brand:'',size:'',unit:'pcs'};
+}
+function billReview(){
+const inc=BILL.rows.filter(r=>r.include);
+const total=inc.reduce((s,r)=>s+num(r.rate)*(+r.qty||1),0);
+return `<div class="top"><button onclick="BILL.stage='idle';render()">‹</button><b>Enter items</b><span></span></div>
+<div class="pad">
+<div class="review-head">
+<div class="note">${inc.length} item(s) selected</div>
+<button class="calc" onclick="openCalc()" title="Calculator">🧮</button>
+</div>
+${BILL.imgData?`<div class="bill-thumb" onclick="showFullBill()">
+<img src="${BILL.imgData}" alt="bill">
+<div class="note">Tap image to enlarge</div>
+</div>`:''}
+<div class="gc bill-hd-card">
+<label>Supplier<input value="${esc(BILL.supplier)}" oninput="BILL.supplier=this.value"></label>
+<label>Bill no<input value="${esc(BILL.bill_no)}" oninput="BILL.bill_no=this.value"></label>
+<label>Bill date<input value="${esc(BILL.bill_date)}" oninput="BILL.bill_date=this.value" placeholder="dd/mm/yyyy"></label>
+</div>
+<p class="note">Set Type / Brand / Size first if you want to narrow the item list. Then tap the item name to pick from items matching those filters.</p>
+${BILL.rows.map((r,i)=>billRow(r,i)).join('')}
+<div class="tot"><span>Bill total</span><span>${fm(total)}</span></div>
+<div class="ac" style="justify-content:space-between">
+<button class="b2" onclick="BILL.rows.push(newBillRow());render()">+ Add row</button>
+<button class="b1" onclick="billConfirm()">Confirm (${inc.length})</button>
+</div>
+</div>`;
+}
+function showFullBill(){
+if(!BILL.imgData)return;
+open(`<h3>Bill image</h3>
+<img src="${BILL.imgData}" style="width:100%;border-radius:10px;background:#000;max-height:70vh;object-fit:contain">
+<div class="ac"><button class="b2" onclick="closeSh()">Close</button></div>`);
+}
+function billRow(r,i){
+const cls=r.matched?'':(r.name?'warn':'');
+const nameLabel=r.matched?esc(r.matched.name):(r.create?esc(r.name)+' (new)':(r.name?esc(r.name)+' (new)':'— tap to pick item —'));
+const namePh=!r.matched&&!r.name;
+const filters=[];
+if(r.type)filters.push('Type: '+r.type);
+if(r.brand)filters.push('Brand: '+r.brand);
+if(r.size)filters.push('Size: '+r.size);
+return `<div class="bl-card ${r.include?'':'skip'} ${cls}">
+<button class="bl-del" onclick="billRemoveRow(${i})" title="Remove row">✕</button>
+<div class="bl-hd">
+<input type="checkbox" ${r.include?'checked':''} onchange="BILL.rows[${i}].include=this.checked;render()">
+<div style="flex:1;min-width:0;padding-right:36px">
+<div class="note" style="margin-bottom:2px">Item${filters.length?' <span class="pill">'+esc(filters.join(' · '))+'</span>':''}</div>
+<button class="bl-name-pick ${namePh?'ph':''}" onclick="billOpenPicker(${i})">${nameLabel}</button>
+</div>
+</div>
+<div class="bl-line">
+<span class="note" style="width:36px">Rate</span>
+<input type="number" step="any" value="${r.rate}" oninput="BILL.rows[${i}].rate=this.value">
+<span class="note" style="width:36px;text-align:right">Qty</span>
+<input type="number" step="any" value="${r.qty}" oninput="BILL.rows[${i}].qty=this.value">
+</div>
+<div class="bl-fields">
+<div>
+<label>Type</label>
+<button class="pick" onclick="billFieldPick(${i},'type')">${r.type?esc(r.type):'<span class="note">Tap to select</span>'}</button>
+</div>
+<div>
+<label>Brand</label>
+<button class="pick" onclick="billFieldPick(${i},'brand')">${r.brand?esc(r.brand):'<span class="note">Tap to select</span>'}</button>
+</div>
+<div>
+<label>Size</label>
+<button class="pick" onclick="billFieldPick(${i},'size')">${r.size?esc(r.size):'<span class="note">Tap to select</span>'}</button>
+</div>
+<div>
+<label>Unit</label>
+<button class="pick" onclick="billFieldPick(${i},'unit')">${r.unit?esc(r.unit):'<span class="note">pcs</span>'}</button>
+</div>
+</div>
+</div>`;
+}
+function billRemoveRow(i){
+if(i<0||i>=BILL.rows.length)return;
+BILL.rows.splice(i,1);
+render();
+}
+function billScope(r){
+return items.filter(it=>{
+if(r.type && String(it.type||'').trim()!==r.type)return false;
+if(r.brand && String(it.brand||'').trim()!==r.brand)return false;
+if(r.size && String(it.size||'').trim()!==r.size)return false;
+return true;
+});
+}
+function billPickerList(i){
+const r=BILL.rows[i];
+if(!r)return '';
+const q=normLite(r._q||'');
+let pool=billScope(r);
+const scopeCount=pool.length;
+if(q)pool=pool.filter(it=>normLite(it.name).includes(q));
+const shown=pool.slice(0,40);
+const active=[];
+if(r.type)active.push('Type: '+esc(r.type));
+if(r.brand)active.push('Brand: '+esc(r.brand));
+if(r.size)active.push('Size: '+esc(r.size));
+let h='';
+if(active.length){
+h+=`<p class="note" style="margin:0 0 6px">Filtering by ${active.join(' · ')} — ${scopeCount} item(s)</p>`;
+}else{
+h+=`<p class="note" style="margin:0 0 6px">No filters — showing all ${items.length} items. Set Type/Brand/Size to narrow.</p>`;
+}
+const typed=q && !pool.some(it=>normLite(it.name)===q);
+if(typed){
+h+=`<div class="op" onclick='billCreateNew(${i},${JSON.stringify(r._q.trim())})'><b>＋ Create new “${esc(r._q.trim())}”</b><span></span></div>`;
+}
+if(shown.length){
+h+=shown.map(it=>{
+const tags=[it.brand,it.size,it.unit&&it.unit!=='pcs'?it.unit:''].filter(Boolean).join(' · ');
+return `<div class="op" onclick="billPickMatch(${i},'${it.id}')">${esc(it.name)}${tags?` <span style="color:var(--mut);font-size:12px">${esc(tags)}</span>`:''}<span>${fm(it.cost)}</span></div>`;
+}).join('');
+if(pool.length>shown.length){
+h+=`<p class="note" style="margin:8px 0 0">Showing first ${shown.length} of ${pool.length}. Type to narrow.</p>`;
+}
+}else if(!typed){
+h+=`<div class="empty" style="padding:20px 0">No items match. Type a name to create a new one.</div>`;
+}
+const createName=(r._q||'').trim();
+if(createName && !typed){
+h+=`<div class="op" onclick='billCreateNew(${i},${JSON.stringify(createName)})'><b>＋ Create new “${esc(createName)}”</b><span></span></div>`;
+}else if(!createName){
+h+=`<div class="op" onclick="billCreateNewPrompt(${i})"><b>＋ Create new item…</b><span></span></div>`;
+}
+return h;
+}
+function billOpenPicker(i){
+const r=BILL.rows[i];
+if(!r)return;
+r._q='';
+open(`<h3>Pick item</h3>
+<input id="blp_q" placeholder="Search items…" autocomplete="off" oninput="BILL.rows[${i}]._q=this.value;billRefreshPicker(${i})">
+<div id="blp_${i}" style="max-height:55vh;overflow:auto;margin-top:6px">${billPickerList(i)}</div>
+<div class="ac">
+${r.matched||r.name?`<button class="b2 dng" onclick="billClearPick(${i})">Clear</button>`:''}
+<button class="b2" onclick="closeSh()">Cancel</button>
+</div>`);
+setTimeout(()=>{const e=$('blp_q');if(e)e.focus()},100);
+}
+function billRefreshPicker(i){
+const el=$('blp_'+i);
+if(el)el.innerHTML=billPickerList(i);
+}
+function billClearPick(i){
+const r=BILL.rows[i];
+if(!r)return;
+r.matched=null;r.create=false;r.name='';r._q='';
+closeSh();render();
+}
+function billCreateNew(i,name){
+const r=BILL.rows[i];
+if(!r)return;
+r.matched=null;r.create=true;r.name=String(name||'').trim();
+if(r.name===''){return billCreateNewPrompt(i)}
+closeSh();render();
+}
+function billCreateNewPrompt(i){
+const r=BILL.rows[i];
+if(!r)return;
+open(`<h3>Create new item</h3>
+<p class="note">Give it a name. Type/Brand/Size/Unit will come from the row's current values.</p>
+<input id="bcn_name" placeholder="Item name" value="${esc(r._q||r.name||'')}">
+<div class="ac">
+<button class="b2" onclick="billOpenPicker(${i})">Back</button>
+<button class="b1" onclick="billCreateNewConfirm(${i})">Create</button>
+</div>`);
+setTimeout(()=>{const e=$('bcn_name');if(e)e.focus()},100);
+}
+function billCreateNewConfirm(i){
+const r=BILL.rows[i];
+if(!r)return;
+const v=($('bcn_name')?.value||'').trim();
+if(!v)return toast('Enter a name');
+r.matched=null;r.create=true;r.name=v;
+closeSh();render();
+}
+const normLite=s=>String(s||'').toLowerCase().replace(/\s+/g,' ').trim();
+function billFieldPick(rowIdx,field){
+const r=BILL.rows[rowIdx];
+if(!r)return;
+const counts=new Map();
+items.forEach(i=>{
+const v=String(i[field]??'').trim();
+if(v)counts.set(v,(counts.get(v)||0)+1);
+});
+BILL.rows.forEach(b=>{
+const v=String(b[field]??'').trim();
+if(v&&!counts.has(v))counts.set(v,0);
+});
+const current=String(r[field]??'').trim();
+const fieldLabel={type:'Type',brand:'Brand',size:'Size',unit:'Unit'}[field]||field;
+window.BFP={rowIdx,field};
+const sorted=[...counts.entries()].sort((a,b)=>{
+if(b[1]!==a[1])return b[1]-a[1];
+return a[0].localeCompare(b[0],undefined,{numeric:true});
+});
+window.BF_COUNTS=sorted;
+open(`<h3>Select ${fieldLabel}</h3>
+<input id="bfq" placeholder="Search or type a new ${fieldLabel.toLowerCase()}…" oninput="bfList()">
+<div id="bfnw" style="margin-top:8px">
+<button class="b2" style="width:100%;text-align:left;color:var(--ac);font-weight:600" onclick="bfNew()">＋ Create new ${fieldLabel.toLowerCase()}</button>
+</div>
+<div id="bfl" style="max-height:50vh;overflow:auto;margin-top:6px"></div>
+<div class="ac">
+${current?`<button class="b2 dng" onclick="bfClear()">Clear</button>`:''}
+<button class="b2" onclick="closeSh()">Cancel</button>
+</div>`);
+setTimeout(()=>{const e=$('bfq');if(e)e.focus()},100);
+bfList();
+}
+function bfList(){
+const q=($('bfq')?.value||'').trim();
+const qc=cp(q);
+const list=window.BF_COUNTS||[];
+const current=String(BILL.rows[window.BFP.rowIdx]?.[window.BFP.field]??'').trim();
+let h='';
+if(q&&!list.some(([v])=>v.toLowerCase()===q.toLowerCase())){
+h+=`<div class="op" onclick='bfSet(${JSON.stringify(q)})'><b>＋ Use “${esc(q)}”</b><span></span></div>`;
+}
+list.forEach(([v,n])=>{
+if(!qc||cp(v).includes(qc)){
+h+=`<div class="op" onclick='bfSet(${JSON.stringify(v)})'>${esc(v)}<span>${n||''}${v===current?' ✓':''}</span></div>`;
+}
+});
+if(!h)h='<div class="empty" style="padding:20px 0">No matches. Type a new value above.</div>';
+$('bfl').innerHTML=h;
+}
+function bfSet(v){
+const {rowIdx,field}=window.BFP||{};
+if(rowIdx==null)return closeSh();
+BILL.rows[rowIdx][field]=v;
+closeSh();
+render();
+}
+function bfClear(){
+const {rowIdx,field}=window.BFP||{};
+if(rowIdx==null)return closeSh();
+BILL.rows[rowIdx][field]='';
+closeSh();
+render();
+}
+function bfNew(){
+const q=($('bfq')?.value||'').trim();
+if(!q){toast('Type a value first');return}
+bfSet(q);
+}
+function billPickMatch(i,id){
+const r=BILL.rows[i];
+if(id==='__new__'){
+r.matched=null;r.create=true;
+}else{
+const it=items.find(x=>x.id===id);
+if(it){
+r.matched=it;r.create=false;
+r.name=it.name;
+if(!r.type)r.type=it.type||'';
+if(!r.brand)r.brand=it.brand||'';
+if(!r.size)r.size=it.size||'';
+if(!r.unit||r.unit==='pcs')r.unit=it.unit||'pcs';
+if(!r.rate)r.rate=it.cost||0;
+}
+}
+r._q='';
+closeSh();
+render();
+}
+function billConfirm(){
+const inc=BILL.rows.filter(r=>r.include&&r.name.trim());
+if(!inc.length)return toast('Add at least one named row');
+const now=new Date().toISOString();
+const newItems=[];
+const upd=[];
+const lines=[];
+for(const r of inc){
+const rate=num(r.rate);
+if(r.matched){
+const it=r.matched;
+it.cost=rate||it.cost;
+it.type=r.type||it.type;
+it.brand=r.brand||it.brand;
+it.size=r.size||it.size;
+it.unit=r.unit||it.unit;
+it.updated_at=now;
+upd.push(it);
+lines.push({item_id:it.id,name:it.name,qty:+r.qty||1,rate,bill_name:r.name});
+}else{
+const ni={
+id:uid(),
+o:items.reduce((m,x)=>Math.max(m,x.o),-1)+1+newItems.length,
+name:r.name||'Unnamed item',
+code:'',barcode:'',
+type:r.type||'',brand:r.brand||'',size:r.size||'',
+aliases:'',
+unit:r.unit||'pcs',mrp:'',
+cost:rate,price:0,qty:0,low:0,
+updated_at:now
+};
+newItems.push(ni);
+lines.push({item_id:ni.id,name:ni.name,qty:+r.qty||1,rate,bill_name:r.name,created:true});
+}
+}
+items=items.concat(newItems);
+const hadImg=!!BILL.imgData;
+BILL.imgData='';
+BILL.imgMime='';
+const pSup=BILL.supplier,pNo=BILL.bill_no,pDate=BILL.bill_date;
+Object.assign(BILL,{stage:'idle',supplier:'',bill_no:'',bill_date:'',rows:[],error:''});
+S.screen=null;
+persist();
+if(upd.length)enqueue({type:'upsert',rows:upd});
+if(newItems.length)enqueue({type:'upsert',rows:newItems});
+const total=inc.reduce((s,r)=>s+num(r.rate)*(+r.qty||1),0);
+enqueue({type:'purchase',row:{
+client_id:uuid(),supplier:pSup||'',bill_no:pNo||'',bill_date:pDate||'',
+total,lines
+}});
+toast('Updated '+upd.length+', created '+newItems.length+(hadImg?' · image discarded':''));
+go('items');
+}
+const CALC={expr:''};
+function openCalc(){
+CALC.expr='';
+const keys=[
+['C','del'],['(','op'],[')','op'],['÷','op'],
+['7',''],['8',''],['9',''],['×','op'],
+['4',''],['5',''],['6',''],['−','op'],
+['1',''],['2',''],['3',''],['+','op'],
+['0',''],['.',''],['⌫','del'],['=','eq']
+];
+open(`<h3>Calculator</h3>
+<div class="calc-disp" id="calcDisp">0</div>
+<div class="calc-row">
+${keys.map(([k,cls])=>`<button class="${cls}" onclick="calcKey('${k.replace(/'/g,"\\'")}')">${k}</button>`).join('')}
+</div>
+<div class="ac"><button class="b2" onclick="closeSh()">Close</button></div>`);
+}
+function calcKey(k){
+if(k==='C'){CALC.expr='';}
+else if(k==='⌫'){CALC.expr=CALC.expr.slice(0,-1);}
+else if(k==='='){
+try{
+const safe=CALC.expr.replace(/×/g,'*').replace(/÷/g,'/').replace(/−/g,'-');
+if(!/^[0-9+\-*/(). ]+$/.test(safe))throw new Error('bad');
+const val=Function('"use strict";return ('+safe+')')();
+CALC.expr=String(val);
+}catch(e){CALC.expr='Error';}
+}else{
+if(CALC.expr==='Error')CALC.expr='';
+CALC.expr+=k;
+}
+const d=$('calcDisp');
+if(d)d.textContent=CALC.expr||'0';
+}
+const S={tab:'items',grp:null,item:null,sel:null,q:'',gb:'none',ins:false,sort:'o',gks:[],screen:null};
+const GB=[['none','None'],['name','Name'],['cost','Cost'],['price','Price'],['type','Type'],['brand','Brand'],['size','Size'],['mrp','Mrp'],['unit','Unit']];
+const cmp={
+o:(x,y)=>x.o-y.o,
+n:(x,y)=>x.name.localeCompare(y.name,undefined,{numeric:true}),
+nz:(x,y)=>y.name.localeCompare(x.name,undefined,{numeric:true}),
+q:(x,y)=>y.qty-x.qty,
+c:(x,y)=>y.cost-x.cost
+};
+const gk=i=>String(i[S.gb]??'')||'—';
+const cp=t=>String(t??'').toLowerCase().replace(/[^\p{L}\p{N}]+/gu,'');
+const hay=i=>[i.name,i.size,i.brand,i.type,i.code,i.barcode,i.mrp,i.unit,i.aliases].join(' ').toLowerCase();
+const flt=()=>{
+const qs=S.q.trim().toLowerCase(),qc=cp(qs),tk=qs.split(/\s+/).filter(Boolean);
+const l=items.filter(i=>(!S.ins||i.qty>0)&&(S.grp==null||gk(i)===S.grp)).sort(cmp[S.sort]);
+if(!qc)return l;
+const sc=new Map();
+l.forEach(i=>{const h=hay(i);sc.set(i.id,cp(i.name).includes(qc)?3:cp(h).includes(qc)?2:tk.every(t=>h.includes(t))?1:0)});
+const top=l.some(i=>sc.get(i.id)>=2)?2:1;
+return l.filter(i=>sc.get(i.id)>=top).sort((a,b)=>sc.get(b.id)-sc.get(a.id));
+};
+function render(){
+try{
+let h;
+if(S.screen==='bill')h=billScr();
+else if(S.item)h=detail();
+else h={home,items:itemsScr,tx:txScr,set:setScr}[S.tab]();
+$('app').innerHTML=h;
+$('nav').style.display=(S.item||S.screen)?'none':'';
+document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.t==S.tab));
+const setBtn=document.querySelector('nav button[data-t="set"]');
+if(setBtn){
+let badge=setBtn.querySelector('.admin-badge');
+if(isAdmin&&!badge){
+badge=document.createElement('span');
+badge.className='admin-badge';
+badge.textContent='ADMIN';
+setBtn.appendChild(badge);
+}else if(!isAdmin&&badge){
+badge.remove();
+}
+}
+setStat(sbStat);
+}catch(e){
+console.error('Render crashed:',e);
+lastCrash=e;
+$('app').innerHTML=crashScreen(e);
+$('nav').style.display='none';
+}
+}
+function crashScreen(e){
+return `<div class="crash">
+<h2>Something went wrong</h2>
+<p class="note">The app hit an error while rendering. You can reload, or copy the error below.</p>
+<pre>${esc((e&&e.message)||String(e))}</pre>
+<div class="ac" style="justify-content:center">
+<button class="b2" onclick="location.reload()">Reload app</button>
+<button class="b1" onclick="clearLocalAndReload()">Reset local data</button>
+</div>
+<p class="note" style="margin-top:16px">Reset clears this browser's copy only. Data in the database is untouched.</p>
+</div>`;
+}
+function clearLocalAndReload(){
+if(!confirm('Clear this browser\'s local data and reload? Database data stays.'))return;
+try{localStorage.removeItem(K);localStorage.removeItem(K_QUEUE)}catch(e){}
+location.reload();
+}
+const go=t=>{S.tab=t;S.item=null;S.grp=null;S.sel=null;S.screen=null;render();scrollTo(0,0)};
+const back=()=>{if(S.item)S.item=null;else if(S.grp!=null){S.grp=null;S.sel=null}render()};
+function tapI(id){
+if(S.sel){S.sel.has(id)?S.sel.delete(id):S.sel.add(id);render()}
+else{S.item=id;render();scrollTo(0,0)}
+}
+function rowH(i){
+const s=[fm(i.cost),fm(i.price),i.type,i.brand,i.size].filter(Boolean).map(esc).join('<i></i>');
+const u=uShort(i.unit);
+return `<div class="it" onclick="tapI('${i.id}')">
+${S.sel?`<div class="ck ${S.sel.has(i.id)?'on':''}"></div>`:'<div class="th"></div>'}
+<div class="mid"><div class="nm">${esc(i.name)}</div><div class="sub">${s}</div></div>
+<div class="q ${i.qty<0?'neg':''}">${i.qty}${u?` <small>${esc(u)}</small>`:''}</div>
+</div>`;
+}
+function listH(){
+const l=flt(),em='<div class="empty">No items found</div>';
+if(S.gb!='none'&&S.grp==null){
+const m=new Map();
+l.forEach(i=>{const k=gk(i),g=m.get(k)||{n:0,q:0};g.n++;g.q+=i.qty;m.set(k,g)});
+S.gks=[...m.keys()].sort((a,b)=>String(a).localeCompare(b,undefined,{numeric:true}));
+const tq=l.reduce((s,i)=>s+Math.max(i.qty,0),0);
+const cs=['#ef6a6a','#8b6be0','#3b9cf5','#2db89a','#f0a020'];
+return S.gks.map((k,x)=>{
+const g=m.get(k),p=tq?Math.round(Math.max(g.q,0)/tq*100):0;
+return `<div class="gc" onclick="S.grp=S.gks[${x}];S.q='';render()">
+<div class="gh"><b>${esc(k)}</b><span style="background:${cs[x%5]}">${p}%</span></div>
+<div class="gs"><div><b>${g.n}</b><small>Item</small></div><div><b>${g.q}</b><small>Quantity</small></div></div>
+</div>`;
+}).join('')||em;
+}
+return l.map(rowH).join('')||em;
+}
+function itemsScr(){
+const inG=S.grp!=null,gl=(GB.find(g=>g[0]==S.gb)||[])[1];
+return `<div class="top">${inG?'<button onclick="back()">‹</button>':'<span></span>'}<b>${inG?esc(S.grp):'Item List'}</b>
+<span style="display:flex;justify-content:flex-end;gap:4px">
+<button onclick="openBill()" title="Bill (manual)">📷</button>
+<button onclick="itemForm()" title="Add item">+</button>
+</span></div>
+<div class="pad">
+<input class="search" placeholder="Search name, SKU, brand, size…" value="${esc(S.q)}" oninput="S.q=this.value;$('lst').innerHTML=listH()">
+<div class="chips">
+${inG?'':`<button class="chip ${S.gb!='none'?'on':''}" onclick="pGB()">${S.gb=='none'?'Group by':gl} ▾</button>`}
+<button class="chip ${S.ins?'on':''}" onclick="S.ins=!S.ins;render()">In stock</button>
+${S.gb!='none'&&!inG?'':`<button class="chip ${S.sel?'on':''}" onclick="S.sel=S.sel?null:new Set();render()">${S.sel?'Cancel':'Select'}</button>`}
+<span class="sp"></span>
+<button class="srt" onclick="pSort()">⇅</button>
+</div>
+<div id="lst">${listH()}</div>
+</div>
+${S.sel?`<div class="sb"><div><b>${S.sel.size} selected</b>
+<span>
+<button class="b2" onclick="flt().forEach(i=>S.sel.add(i.id));render()">All</button>
+<button class="b2" onclick="setTypeSel()">Type</button>
+<button class="b2" onclick="setUnitSel()">Unit</button>
+${isAdmin?'<button class="b2 dng" onclick="delSel()">Delete</button>':''}
+</span></div></div>`:''}`;
+}
+function openBill(){
+S.screen='bill';
+BILL.stage='idle';
+BILL.imgData='';BILL.imgMime='';BILL.error='';
+BILL.rows=[];BILL.supplier='';BILL.bill_no='';BILL.bill_date='';
+render();
+scrollTo(0,0);
+}
+function pick(t,o,cur,cb){
+window.PK=[o,cb];
+open(`<h3>${t}</h3>`+o.map(([v,l],x)=>`<div class="op" onclick="closeSh();PK[1](PK[0][${x}][0])">${l}<span>${v===cur?'✓':''}</span></div>`).join(''));
+}
+const pGB=()=>pick('Group by',GB,S.gb,v=>{S.gb=v;S.grp=null;S.sel=null;render()});
+const pSort=()=>pick('Sort by',[['o','Original order'],['n','Name A–Z'],['nz','Name Z–A'],['q','Quantity (high to low)'],['c','Cost (high to low)']],S.sort,v=>{S.sort=v;render()});
+function open(h){const d=$('sh');d.innerHTML=h;if(!d.open)d.showModal()}
+const closeSh=()=>$('sh').close();
+$('sh').onclick=e=>{if(e.target==$('sh'))closeSh()};
+function toast(m){
+const t=$('toast');t.textContent=m;
+try{t.hidePopover()}catch(e){}
+try{t.showPopover()}catch(e){t.style.display='block'}
+clearTimeout(t.h);
+t.h=setTimeout(()=>{try{t.hidePopover()}catch(e){t.style.display='none'}},4500);
+}
+let AK=null;
+function ask(t,m,ok,cb,danger){
+AK=cb;
+open(`<h3>${t}</h3><p style="font-size:15px;color:var(--mut)">${m}</p>
+<div class="ac"><button class="b2" onclick="closeSh()">Cancel</button>
+<button class="b1" style="${danger?'background:var(--bad)':''}" onclick="closeSh();AK()">${ok}</button></div>`);
+}
+function askText(t,m,ph,ok,cb,danger){
+AK=cb;
+open(`<h3>${t}</h3><p style="font-size:15px;color:var(--mut)">${m}</p><input id="at" placeholder="${ph}">
+<div class="ac"><button class="b2" onclick="closeSh()">Cancel</button>
+<button class="b1" style="${danger?'background:var(--bad)':''}" onclick="var v=$('at').value.trim();closeSh();AK(v)">${ok}</button></div>`);
+}
+function delSel(){
+if(!S.sel.size)return;
+if(!isAdmin)return toast('Admin only');
+ask('Delete items','Delete '+S.sel.size+' selected item(s)? This cannot be undone.','Delete',()=>{
+const ids=[...S.sel];
+items=items.filter(i=>!S.sel.has(i.id));
+S.sel=null;persist();render();
+enqueue({type:'delete',ids});
+},1);
+}
+function setTypeSel(){
+if(!S.sel.size)return;
+askText('Set type','Type for '+S.sel.size+' selected item(s). Leave empty to clear.','e.g. Plumbing','Apply',t=>{
+const rows=[];
+const ch=items.filter(i=>S.sel.has(i.id));
+ch.forEach(i=>{
+i.type=t;i.updated_at=new Date().toISOString();
+rows.push({id:i.id,patch:{type:i.type,updated_at:i.updated_at}});
+});
+S.sel=null;persist();render();
+enqueue({type:'patch',rows});
+});
+}
+function setUnitSel(){
+if(!S.sel.size)return;
+pick('Set unit',UNITS.map(u=>[u,u]),items.find(i=>S.sel.has(i.id))?.unit||'pcs',v=>{
+const rows=[];
+const ch=items.filter(i=>S.sel.has(i.id));
+ch.forEach(i=>{
+i.unit=v;i.updated_at=new Date().toISOString();
+rows.push({id:i.id,patch:{unit:i.unit,updated_at:i.updated_at}});
+});
+S.sel=null;persist();render();
+enqueue({type:'patch',rows});
+});
+}
+function detail(){
+const i=items.find(x=>x.id==S.item);
+if(!i){S.item=null;return itemsScr()}
+const kv=(k,v)=>`<div class="kv"><span>${k}</span><b>${v===''||v==null?'':esc(v)}</b></div>`;
+const m=i.cost?((i.price-i.cost)/i.cost*100).toFixed(1)+'%':'-';
+return `<div class="top"><button onclick="back()">‹</button><b>Item Information</b><button onclick="menu()">⋯</button></div>
+<div class="head"><div class="th"></div><b>${esc(i.name)}</b></div>
+<div class="gap"></div>
+${kv('SKU',i.code)}${kv('Barcode',i.barcode)}
+<div class="gap"></div>
+${kv('Type',i.type)}${kv('Brand',i.brand)}${kv('Size',i.size)}${kv('Unit',i.unit)}${kv('Mrp',i.mrp===''?'-':i.mrp)}
+${i.aliases?`<div class="gap"></div>${kv('Also known as',i.aliases.split('|').join(', '))}`:''}
+<div class="gap"></div>
+${kv('Cost',fm(i.cost))}${kv('Price',fm(i.price))}${kv('Margin',m)}${kv('Stock value',fm(i.qty*i.cost))}
+<div class="bb"><div>
+<div><div class="bl">Current stock</div><div class="bq">${i.qty}${i.unit&&i.unit!=='pcs'?` <small>${esc(i.unit)}</small>`:''}</div></div>
+<button class="b1" onclick="txs('${i.id}')">+ New</button>
+</div></div>`;
+}
+function menu(){
+const opts=[['e','Edit item']];
+if(isAdmin)opts.push(['d','Delete item']);
+pick('',opts,null,v=>{
+if(v=='e')itemForm(S.item);
+else if(v=='d'){
+if(!isAdmin)return toast('Admin only');
+ask('Delete item','Delete this item? This cannot be undone.','Delete',()=>{
+const id=S.item;
+items=items.filter(x=>x.id!=id);
+S.item=null;persist();render();
+enqueue({type:'delete',ids:[id]});
+},1);
+}
+});
+}
+const FL=[
+['name','Item name'],['code','SKU'],['barcode','Barcode'],
+['type','Type'],['brand','Brand'],['size','Size'],
+['unit','Unit'],['mrp','Mrp','type="number"'],
+['cost','Cost','type="number"'],['price','Price','type="number"'],
+['aliases','Aliases (separated by |)','','aliases']
+];
+const PKS=['type','brand','size'];
+const FK=['name','code','barcode','type','brand','size','unit','mrp','cost','price','qty','low','aliases'];
+const snap=()=>{S.dr={};FK.forEach(k=>{const e=$('f_'+k);if(e)S.dr[k]=e.value})};
+function itemForm(id,keep){
+if(!keep){S.edit=id||null;S.dr=null}
+const b=S.edit?items.find(x=>x.id==S.edit):{
+name:'',code:'',barcode:'',
+type:S.gb=='type'&&S.grp!=null?S.grp:'',
+brand:'',size:'',unit:'pcs',mrp:'',cost:'',price:'',qty:'',low:0,aliases:''
+};
+const i={...b,...(S.dr||{})};
+open(`<h3>${S.edit?'Edit item':'New item'}</h3>`+
+FL.map(([k,l,x,type])=>{
+if(PKS.includes(k)){
+return `<label>${l}<input class="pk" id="f_${k}" readonly placeholder="Tap to select ${l.toLowerCase()}" value="${esc(i[k])}" onclick="pickVal('${k}')"></label>`;
+}
+if(k==='unit'){
+return `<label>${l}<input class="pk" id="f_unit" readonly value="${esc(i.unit||'pcs')}" onclick="pickUnit()"></label>`;
+}
+return `<label>${l}<input id="f_${k}" ${x||''} step="any" value="${esc(i[k])}"></label>`;
+}).join('')+
+(S.edit?'':`<label>Opening quantity<input id="f_qty" type="number" step="any" value="${esc(i.qty)}"></label>`)+
+`<label>Low-stock alert at (0 = off)<input id="f_low" type="number" step="any" value="${esc(i.low||0)}"></label>
+<div class="ac"><button class="b2" onclick="closeSh();S.edit=null;render()">Cancel</button>
+<button class="b1" onclick="saveI()">Save</button></div>`);
+}
+function pickUnit(){
+snap();
+open(`<h3>Select unit</h3>`+
+UNITS.map(u=>`<div class="op" onclick="setUnit('${u}')">${u}<span>${(S.dr?.unit||'pcs')===u?'✓':''}</span></div>`).join('')+
+`<label>Or type a custom unit<input id="cu" placeholder="e.g. bundle"></label>
+<div class="ac"><button class="b2" onclick="itemForm(S.edit,true)">Back</button>
+<button class="b1" onclick="setUnit($('cu').value.trim()||'pcs')">Use custom</button></div>`);
+}
+function setUnit(u){S.dr=S.dr||{};S.dr.unit=u;itemForm(S.edit,true)}
+function pickVal(k){
+snap();S.pk=k;
+const m=new Map();
+items.forEach(i=>{const v=String(i[k]??'').trim();if(v)m.set(v,(m.get(v)||0)+1)});
+S.pkm=m;S.pkv=[...m.keys()].sort((a,b)=>a.localeCompare(b,undefined,{numeric:true}));
+const l=(FL.find(f=>f[0]==k)||[])[1];S.pkl=l;
+open(`<h3>Select ${l}</h3>
+<input id="pq" placeholder="Search or type a new ${l.toLowerCase()}…" oninput="pkList()">
+<div id="nw" style="margin-top:8px"><button class="b2" style="width:100%;text-align:left;color:var(--ac);font-weight:600" onclick="newPk()">＋ Create new ${l.toLowerCase()}</button></div>
+<div id="pl" style="max-height:45vh;overflow:auto;margin-top:6px"></div>
+<div class="ac"><button class="b2" onclick="itemForm(S.edit,true)">Back</button></div>`);
+pkList();
+}
+function pkList(){
+const q=$('pq').value.trim(),qc=cp(q);let h='';
+if(!q)h+='<div class="op" onclick="setPk(-2)">— None —<span></span></div>';
+else if(!S.pkv.some(v=>v.toLowerCase()==q.toLowerCase()))
+h+=`<div class="op" onclick="setPk(-1)"><b>＋ Add “${esc(q)}”</b><span></span></div>`;
+S.pkv.forEach((v,x)=>{
+if(!qc||cp(v).includes(qc))
+h+=`<div class="op" onclick="setPk(${x})">${esc(v)}<span>${S.pkm.get(v)}</span></div>`;
+});
+$('pl').innerHTML=h;
+}
+function newPk(){
+$('nw').innerHTML=`<div style="display:flex;gap:8px"><input id="nq" placeholder="New ${S.pkl.toLowerCase()} name" style="flex:1">
+<button class="b1" style="padding:10px 18px" onclick="mkPk()">Add</button></div>`;
+$('nq').focus();
+}
+function mkPk(){
+const v=$('nq').value.trim();if(!v)return toast('Enter a name');
+const ex=S.pkv.find(x=>x.toLowerCase()==v.toLowerCase());
+S.dr[S.pk]=ex||v;itemForm(S.edit,true);
+}
+function setPk(x){S.dr[S.pk]=x==-1?$('pq').value.trim():x==-2?'':S.pkv[x];itemForm(S.edit,true)}
+function saveI(){
+const v=k=>$('f_'+k).value.trim();
+if(!v('name'))return toast('Enter item name');
+if(!validNum(v('mrp')))return toast('MRP must be a number (e.g. 32, not "30-35")');
+if(!validNum(v('cost')))return toast('Cost must be a number (e.g. 32, not "30-35")');
+if(!validNum(v('price')))return toast('Price must be a number (e.g. 32, not "30-35")');
+if(!validNum(v('low')))return toast('Low-stock alert must be a number');
+if(!S.edit&&!validNum($('f_qty')?$('f_qty').value:''))return toast('Opening quantity must be a number');
+const now=new Date().toISOString();
+const o={
+name:v('name'),code:v('code'),barcode:v('barcode'),type:v('type'),
+brand:v('brand'),size:v('size'),unit:v('unit')||'pcs',
+aliases:v('aliases'),
+mrp:v('mrp')===''?'':num(v('mrp')),
+cost:num(v('cost')),price:num(v('price')),low:num(v('low')),
+updated_at:now
+};
+let it;
+if(S.edit){
+it=items.find(x=>x.id==S.edit);
+Object.assign(it,o);
+persist();
+closeSh();S.edit=null;render();
+enqueue({type:'upsert',rows:[it]});
+}else{
+const q=$('f_qty')?num($('f_qty').value):0;
+it={id:uid(),o:items.reduce((m,x)=>Math.max(m,x.o),-1)+1,qty:q,...o};
+items.push(it);
+if(q){
+const h={id:it.id,t:Date.now(),n:o.name,a:'in',q,b:q,note:'Opening stock',unit:o.unit,cid:uuid()};
+hist.unshift(h);
+enqueue({type:'tx',rows:[toTxRow(h)]});
+}
+persist();
+closeSh();S.edit=null;render();
+enqueue({type:'upsert',rows:[it]});
+}
+}
+function toTxRow(h){
+return {
+client_id:h.cid||uuid(),
+item_id:h.id||null,item_name:h.n,
+action:h.a,qty:h.q,balance:h.b,note:h.note||'',unit:h.unit||'',
+created_at:new Date(h.t).toISOString()
+};
+}
+function txs(id,m){
+S.tx={id,m:m||'in'};
+const i=items.find(x=>x.id==id);
+open(`<h3>${esc(i.name)}</h3>
+<div class="seg">
+<button id="s_in" class="${S.tx.m=='in'?'on':''}" onclick="sg('in')">Stock in</button>
+<button id="s_out" class="${S.tx.m=='out'?'on':''}" onclick="sg('out')">Stock out</button>
+</div>
+<p class="note">Current stock: ${i.qty}${i.unit&&i.unit!=='pcs'?' '+esc(i.unit):''}</p>
+<label>Quantity (${esc(i.unit||'pcs')})<input id="tq" type="number" step="any" min="0"></label>
+<label>Note (supplier, customer, bill no…)<input id="tn"></label>
+<div class="ac"><button class="b2" onclick="closeSh()">Cancel</button>
+<button class="b1" onclick="doTx()">Confirm</button></div>`);
+}
+const sg=m=>{S.tx.m=m;$('s_in').className=m=='in'?'on':'';$('s_out').className=m=='out'?'on':''};
+function doTx(){
+const i=items.find(x=>x.id==S.tx.id),q=num($('tq').value),m=S.tx.m;
+if(!(q>0))return toast('Enter a quantity');
+if(m=='out'&&q>i.qty&&!S.tx.w){
+S.tx.w=1;return toast('Only '+i.qty+' in stock. Tap Confirm again to go negative.');
+}
+i.qty+=m=='in'?q:-q;
+i.updated_at=new Date().toISOString();
+const h={id:i.id,t:Date.now(),n:i.name,a:m,q,b:i.qty,note:$('tn').value.trim(),unit:i.unit,cid:uuid()};
+hist.unshift(h);persist();closeSh();render();
+enqueue({type:'patch',rows:[{id:i.id,patch:{qty:i.qty,updated_at:i.updated_at}}]});
+enqueue({type:'tx',rows:[toTxRow(h)]});
+}
+const txH=h=>`<div class="tx">
+<div>
+<div>${esc(h.n)}</div>
+<div class="note">${new Date(h.t).toLocaleString('en-IN',{dateStyle:'medium',timeStyle:'short'})}${h.note?' · '+esc(h.note):''}</div>
+</div>
+<div style="text-align:right">
+<div class="${h.a}">${h.a=='out'?'−':'+'}${h.q}${h.unit&&h.unit!=='pcs'?' '+esc(h.unit):''}</div>
+<div class="note">Bal ${h.b}</div>
+</div>
+</div>`;
+function home(){
+const c=items.reduce((s,i)=>s+i.qty*i.cost,0);
+const v=items.reduce((s,i)=>s+i.qty*i.price,0);
+return `<div class="top"><span></span><b>Home</b><span></span></div>
+<div class="pad">
+<div class="stats">
+<div class="st"><b>${items.length}</b><span>Items</span></div>
+<div class="st"><b>${items.reduce((s,i)=>s+i.qty,0)}</b><span>Total quantity</span></div>
+<div class="st"><b>${fm(c)}</b><span>Stock value (cost)</span></div>
+<div class="st"><b>${fm(v)}</b><span>Stock value (price)</span></div>
+<div class="st"><b>${fm(v-c)}</b><span>Potential profit</span></div>
+<div class="st"><b class="${items.some(lo)?'out':''}">${items.filter(lo).length}</b><span>Low / negative stock</span></div>
+</div>
+<h4>Recent transactions</h4>
+${hist.slice(0,5).map(txH).join('')||'<div class="empty">No transactions yet</div>'}
+</div>`;
+}
+const txScr=()=>`<div class="top"><span></span><b>Transactions</b><span></span></div>
+${hist.slice(0,500).map(txH).join('')||'<div class="empty">No transactions yet.<br>Open an item and tap + New.</div>'}`;
+function setScr(){
+return `<div class="top"><span></span><b>Settings</b><span></span></div>
+<div class="row">Sync status<span class="note" style="max-width:62%;text-align:right;word-break:break-word"><span id="sbs">${esc(sbStat)}</span> <span id="pend" class="pill ${queue.length?'warn':'on'}">${queue.length?queue.length+' pending':''}</span></span></div>
+<div class="row">Realtime<span class="note"><span id="rts" class="pill ${rtOk?'on':'warn'}">${rtOk?'Live ✓':'Off'}</span></span></div>
+<div class="row" onclick="retrySync()">Retry sync now<span class="note">›</span></div>
+<div class="row" onclick="dbLoad()">Reload from database<span class="note">›</span></div>
+<div class="row" onclick="uploadAll()">Upload all items to database<span class="note">›</span></div>
+<div class="row" onclick="inst()">Install app on this phone<span class="note">›</span></div>
+<div class="row" onclick="impSheet()">Import from Excel / CSV<span class="note">›</span></div>
+<div class="row" onclick="exportCsv()">Export items (CSV)<span class="note">›</span></div>
+${isAdmin?`
+<div class="row" style="color:var(--ac);font-weight:600">Admin actions</div>
+<div class="row dng" onclick="clrH()">Clear transaction history</div>
+<div class="row dng" onclick="delAll()">Delete all items</div>
+`:''}
+<p class="note pad">Data is saved in this browser and synced to the database. Pending changes retry automatically when online.</p>
+${isAdmin?'<p class="note pad">To exit admin mode: tap the ⚙️ Settings icon 3 times quickly.</p>':''}`;
+}
+function uploadAll(){
+if(!items.length)return toast('No items to upload');
+enqueue({type:'upsert',rows:items});
+toast('Queued '+items.length+' items for upload');
+}
+function clrH(){
+if(!isAdmin)return toast('Admin only');
+ask('Clear history','Clear all transaction history?','Clear',()=>{
+hist=[];persist();render();
+enqueue({type:'clearTx'});
+},1);
+}
+function delAll(){
+if(!isAdmin)return toast('Admin only');
+if(!items.length)return toast('No items to delete.');
+askText('Delete all items','This deletes ALL '+items.length+' items from the app and the database. Type DELETE to confirm.','Type DELETE','Delete all',t=>{
+if(t!=='DELETE')return toast('Not deleted. You must type DELETE.');
+items=[];S.sel=null;persist();render();
+enqueue({type:'deleteAll'});
+toast('All items deleted.');
+},1);
+}
+function exportCsv(){
+const H=['SKU','Barcode','Item Name','Cost','Price','Type','Brand','Size','Unit','Mrp','Quantity','Aliases'];
+const L=[H].concat(items.slice().sort(cmp.o).map(i=>[i.code,i.barcode,i.name,i.cost,i.price,i.type,i.brand,i.size,i.unit,i.mrp,i.qty,i.aliases]));
+window.EX={
+csv:'\ufeff'+L.map(r=>r.map(x=>'"'+String(x??'').replace(/"/g,'""')+'"').join(',')).join('\n'),
+tsv:L.map(r=>r.map(x=>String(x??'').replace(/[\t\n\r]+/g,' ')).join('\t')).join('\n')
+};
+open(`<h3>Export items</h3>
+<p class="note">${items.length} items. If the download doesn't start, tap Copy and paste into Excel or Google Sheets.</p>
+<div class="ac" style="justify-content:flex-start">
+<button class="b1" onclick="exDl()">Download CSV</button>
+<button class="b2" onclick="exCp()">Copy for Excel</button>
+</div>
+<textarea id="exT" readonly>${esc(EX.tsv)}</textarea>
+<div class="ac"><button class="b2" onclick="closeSh()">Close</button></div>`);
+}
+function exDl(){
+try{
+const a=document.createElement('a');
+a.href=URL.createObjectURL(new Blob([EX.csv],{type:'text/csv'}));
+a.download='stock.csv';document.body.appendChild(a);a.click();a.remove();
+toast('Download started.');
+}catch(e){toast('Download blocked. Use Copy instead.')}
+}
+function exCp(){
+const f=()=>{try{$('exT').select();document.execCommand('copy');toast('Copied.')}catch(e){toast('Could not copy. Select manually.')}};
+try{navigator.clipboard.writeText(EX.tsv).then(()=>toast('Copied.'),f)}catch(e){f()}
+}
+const F=[
+['name','Item name',/item name|^name$|product|particular|^item$/i],
+['code','SKU',/sku|^code$/i],
+['barcode','Barcode',/barcode/i],
+['type','Type',/^type$|categor|group/i],
+['brand','Brand',/brand/i],
+['size','Size',/size/i],
+['unit','Unit',/^unit$|uom/i],
+['mrp','Mrp',/mrp/i],
+['qty','Quantity',/^quantity$|^qty|on hand|balance/i],
+['cost','Cost',/cost|purchase|buy/i],
+['price','Price',/sell|sale|^price$/i],
+['aliases','Aliases',/alias/i]
+];
+let rows=[];
+const impSheet=()=>open('<h3>Import from Excel / CSV</h3>'+
+'<label>Choose file<input id="file" type="file" accept=".xls,.xlsx,.csv" onchange="load(this.files[0])"></label>'+
+'<div id="map"></div>'+
+'<div class="ac"><button class="b2" onclick="closeSh()">Close</button>'+
+'<button class="b1" id="goI" style="display:none" onclick="doImp()">Import</button></div>');
+async function load(f){
+if(!f)return;
+try{
+const wb=XLSX.read(await f.arrayBuffer(),{type:'array'});
+rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,defval:''}).filter(r=>r.some(c=>c!==''));
+const h=rows[0].map(String),used=new Set();
+$('map').innerHTML=`<p class="note">${rows.length-1} rows found. Check which column matches each field:</p>`+
+F.map(([k,l,re])=>{
+const g=h.findIndex((x,i)=>!used.has(i)&&re.test(x));
+if(g>-1)used.add(g);
+return `<label>${l}<select id="m_${k}"><option value="-1">— skip —</option>${
+h.map((x,i)=>`<option value="${i}" ${i==g?'selected':''}>${esc(x||'Column '+(i+1))}</option>`).join('')
+}</select></label>`;
+}).join('')+
+`<label>If items already exist<select id="mode">
+<option value="add">Add to existing items</option>
+<option value="rep">Replace all existing items</option>
+</select></label>`;
+$('goI').style.display='';
+}catch(e){toast('Could not read this file.')}
+}
+async function doImp(){
+const g=k=>+$('m_'+k).value,s=(r,k)=>g(k)>-1?String(r[g(k)]).trim():'';
+if(g('name')<0)return toast('Please choose the Item name column');
+const rep=$('mode').value=='rep';
+let o=rep?0:items.reduce((m,x)=>Math.max(m,x.o),-1)+1;
+const now=new Date().toISOString();
+const out=rows.slice(1).filter(r=>s(r,'name')).map(r=>({
+id:uid(),o:o++,name:s(r,'name'),code:s(r,'code'),barcode:s(r,'barcode'),
+type:s(r,'type'),brand:s(r,'brand'),size:s(r,'size'),
+unit:s(r,'unit')||'pcs',
+aliases:s(r,'aliases'),
+mrp:s(r,'mrp')===''?'':num(s(r,'mrp')),
+qty:g('qty')>-1?num(s(r,'qty')):0,
+cost:g('cost')>-1?num(s(r,'cost')):0,
+price:g('price')>-1?num(s(r,'price')):0,
+low:0,updated_at:now
+}));
+items=rep?out:items.concat(out);
+S.grp=null;S.sel=null;S.sort='o';
+persist();closeSh();render();
+if(rep)enqueue({type:'deleteAll'});
+enqueue({type:'upsert',rows:out});
+toast(out.length+' items imported');
+}
+document.addEventListener('contextmenu',e=>{
+const t=e.target;
+const isEditable=t&&(t.tagName==='INPUT'||t.tagName==='TEXTAREA'||t.isContentEditable);
+if(!isEditable)e.preventDefault();
+});
+document.addEventListener('selectstart',e=>{
+const t=e.target;
+const isEditable=t&&(t.tagName==='INPUT'||t.tagName==='TEXTAREA'||t.isContentEditable);
+if(!isEditable)e.preventDefault();
+});
+(function(){
+const btn=document.getElementById('setBtn');
+if(!btn)return;
+btn.addEventListener('click',()=>{ if(isAdmin)gearTap(); });
+})();
+let dip=null;addEventListener('beforeinstallprompt',e=>{e.preventDefault();dip=e});
+function inst(){if(dip){dip.prompt();dip=null}else toast('Open your browser menu and tap Install app or Add to Home screen.')}
+if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('/sw.js').catch(()=>{}));
+try{render()}catch(e){lastCrash=e;$('app').innerHTML=crashScreen(e)}
+dbLoad();
+window.addEventListener('error',e=>{console.error('Global error:',e.error)});
+</script></body></html>
