@@ -4,8 +4,12 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.data.auth.AuthManager
+import com.example.data.model.DynamicUiConfig
 import com.example.data.model.Item
 import com.example.data.model.TransactionRecord
+import com.example.data.remote.AppUpdateManager
+import com.example.data.remote.DynamicUiManager
+import com.example.data.remote.UpdateStatus
 import com.example.data.repository.BillRowData
 import com.example.data.repository.StockRepository
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -40,6 +44,15 @@ data class GroupStat(
 class StockViewModel(application: Application) : AndroidViewModel(application) {
     val authManager = AuthManager(application)
     val repository = StockRepository(application)
+    val dynamicUiManager = DynamicUiManager(application)
+    val appUpdateManager = AppUpdateManager(application)
+
+    val uiConfig: StateFlow<DynamicUiConfig> = dynamicUiManager.uiConfig
+    val isUiConfigRefreshing: StateFlow<Boolean> = dynamicUiManager.isRefreshing
+    val updateStatus: StateFlow<UpdateStatus> = appUpdateManager.status
+
+    val isAnnouncementDismissed = MutableStateFlow(false)
+    val isUpdateBannerDismissed = MutableStateFlow(false)
 
     val isAuthed: StateFlow<Boolean> = authManager.isAuthed
     val isAdmin: StateFlow<Boolean> = authManager.isAdmin
@@ -85,6 +98,42 @@ class StockViewModel(application: Application) : AndroidViewModel(application) {
         // Trigger initial remote load when ViewModel initializes
         viewModelScope.launch {
             repository.loadFromRemote()
+        }
+        // Fetch dynamic UI config from GitHub
+        viewModelScope.launch {
+            dynamicUiManager.refreshConfig()
+        }
+        // Check for latest APK updates from GitHub Releases
+        viewModelScope.launch {
+            appUpdateManager.checkForUpdates()
+        }
+    }
+
+    fun refreshUiConfig() {
+        viewModelScope.launch {
+            val success = dynamicUiManager.refreshConfig()
+            if (success) {
+                showToast("UI configuration updated from GitHub!")
+            } else {
+                showToast("Could not reach GitHub. Using offline cached UI.")
+            }
+        }
+    }
+
+    fun checkForUpdates() {
+        viewModelScope.launch {
+            val result = appUpdateManager.checkForUpdates()
+            if (result != null && result.isNewerThanCurrent) {
+                showToast("New update found: ${result.tagName}")
+            } else {
+                showToast("You are on the latest version!")
+            }
+        }
+    }
+
+    fun startDownloadAndInstall(url: String) {
+        viewModelScope.launch {
+            appUpdateManager.downloadAndInstall(url)
         }
     }
 

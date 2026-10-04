@@ -15,6 +15,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -56,6 +58,13 @@ import com.example.ui.theme.BrandBlue
 import com.example.ui.theme.DangerRed
 import com.example.ui.theme.SuccessGreen
 import com.example.ui.theme.WarningAmber
+import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.SystemUpdate
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.LinearProgressIndicator
+import com.example.data.remote.UpdateStatus
 
 @Composable
 fun SettingsScreen(viewModel: StockViewModel) {
@@ -65,6 +74,9 @@ fun SettingsScreen(viewModel: StockViewModel) {
     val pendingCount by viewModel.pendingQueueCount.collectAsState()
     val isAdmin by viewModel.isAdmin.collectAsState()
     val allItems by viewModel.allItems.collectAsState()
+    val uiConfig by viewModel.uiConfig.collectAsState()
+    val isUiConfigRefreshing by viewModel.isUiConfigRefreshing.collectAsState()
+    val updateStatus by viewModel.updateStatus.collectAsState()
 
     var showAdminPinDialog by remember { mutableStateOf(false) }
     var showClearHistoryDialog by remember { mutableStateOf(false) }
@@ -134,6 +146,127 @@ fun SettingsScreen(viewModel: StockViewModel) {
                 }
             }
             HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.35f))
+        }
+
+        // Over-The-Air UI & App Updates
+        item {
+            Spacer(modifier = Modifier.height(16.dp))
+            Card(
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.padding(14.dp)) {
+                    Text(
+                        text = "Instant UI & Updates",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = BrandBlue
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // Server-Driven UI Row
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(modifier = Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Palette, contentDescription = null, tint = BrandBlue)
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Column {
+                                Text("Dynamic UI (No download)", fontWeight = FontWeight.SemiBold)
+                                Text(
+                                    "Synced with ui_config.json on GitHub",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                        if (isUiConfigRefreshing) {
+                            CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                        } else {
+                            OutlinedButton(
+                                onClick = { viewModel.refreshUiConfig() },
+                                modifier = Modifier.height(36.dp)
+                            ) {
+                                Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("Sync", style = MaterialTheme.typography.bodySmall)
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = "Store: \"${uiConfig.theme.storeTitle}\"",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+
+                    // In-App Updates Row
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(modifier = Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.SystemUpdate, contentDescription = null, tint = BrandBlue)
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Column {
+                                Text("In-App APK Updates", fontWeight = FontWeight.SemiBold)
+                                Text(
+                                    "Current version: v1.0.0",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                        OutlinedButton(
+                            onClick = { viewModel.checkForUpdates() },
+                            modifier = Modifier.height(36.dp)
+                        ) {
+                            Text("Check", style = MaterialTheme.typography.bodySmall)
+                        }
+                    }
+
+                    when (val s = updateStatus) {
+                        is UpdateStatus.Available -> {
+                            Spacer(modifier = Modifier.height(10.dp))
+                            Button(
+                                onClick = { viewModel.startDownloadAndInstall(s.info.apkDownloadUrl) },
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = ButtonDefaults.buttonColors(containerColor = BrandBlue)
+                            ) {
+                                Icon(Icons.Default.Download, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Install ${s.info.tagName} (1-Tap)")
+                            }
+                        }
+                        is UpdateStatus.Downloading -> {
+                            Spacer(modifier = Modifier.height(10.dp))
+                            LinearProgressIndicator(progress = { s.progress }, modifier = Modifier.fillMaxWidth())
+                            Text(
+                                "Downloading update: ${(s.progress * 100).toInt()}%",
+                                style = MaterialTheme.typography.bodySmall,
+                                modifier = Modifier.padding(top = 4.dp)
+                            )
+                        }
+                        is UpdateStatus.UpToDate -> {
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text(
+                                "✓ App is on the latest GitHub release.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = SuccessGreen
+                            )
+                        }
+                        else -> {}
+                    }
+                }
+            }
+            Spacer(modifier = Modifier.height(16.dp))
         }
 
         // Cloud & Database Actions
