@@ -298,7 +298,17 @@ fun GstCalculatorScreen(viewModel: StockViewModel) {
                                             horizontalArrangement = Arrangement.SpaceBetween,
                                             verticalAlignment = Alignment.CenterVertically
                                         ) {
-                                            Text(matched.name + if (matched.size.isNotBlank()) " (${matched.size})" else "", fontSize = 12.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
+                                            Column(modifier = Modifier.weight(1f)) {
+                                                Text(matched.name, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                                                val meta = listOf(
+                                                    matched.type.ifBlank { null }?.let { "Type: $it" },
+                                                    matched.brand.ifBlank { null }?.let { "Brand: $it" },
+                                                    matched.size.ifBlank { null }?.let { "Size: $it" }
+                                                ).filterNotNull().joinToString(" • ")
+                                                if (meta.isNotBlank()) {
+                                                    Text(meta, fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                                }
+                                            }
                                             if (matched.price > 0.0) {
                                                 Text("₹${matched.price}", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = BrandBlue)
                                             }
