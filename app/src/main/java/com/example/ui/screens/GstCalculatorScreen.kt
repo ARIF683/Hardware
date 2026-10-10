@@ -373,54 +373,59 @@ fun GstCalculatorScreen(viewModel: StockViewModel) {
                     }
                 }
             }
-        }
 
-        Spacer(modifier = Modifier.height(8.dp))
-
-        // Summary Breakdown Footer Card
-        Card(
-            shape = RoundedCornerShape(12.dp),
-            colors = CardDefaults.cardColors(containerColor = BrandBlue.copy(alpha = 0.1f)),
-            border = BorderStroke(1.5.dp, BrandBlue)
-        ) {
-            Column(modifier = Modifier.padding(12.dp)) {
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text("Taxable Amount:", fontSize = 13.sp)
-                    Text("₹%.2f".format(taxableTotal), fontWeight = FontWeight.Bold)
-                }
-                if (isInterState) {
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text("IGST Total:", fontSize = 13.sp)
-                        Text("₹%.2f".format(totalTaxAmount), fontWeight = FontWeight.Bold)
+            // Summary Breakdown Footer Card inside LazyColumn
+            item {
+                Spacer(modifier = Modifier.height(4.dp))
+                Card(
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(containerColor = BrandBlue.copy(alpha = 0.1f)),
+                    border = BorderStroke(1.5.dp, BrandBlue),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(modifier = Modifier.padding(12.dp)) {
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text("Taxable Amount:", fontSize = 13.sp)
+                            Text("₹%.2f".format(taxableTotal), fontWeight = FontWeight.Bold)
+                        }
+                        if (isInterState) {
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text("IGST Total:", fontSize = 13.sp)
+                                Text("₹%.2f".format(totalTaxAmount), fontWeight = FontWeight.Bold)
+                            }
+                        } else {
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text("CGST Total (${totalTaxAmount / 2 / taxableTotal.coerceAtLeast(1.0) * 100}%):", fontSize = 13.sp)
+                                Text("₹%.2f".format(totalTaxAmount / 2), fontWeight = FontWeight.Bold)
+                            }
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text("SGST Total:", fontSize = 13.sp)
+                                Text("₹%.2f".format(totalTaxAmount / 2), fontWeight = FontWeight.Bold)
+                            }
+                        }
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text("Grand Total:", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = BrandBlue)
+                            Text("₹%.2f".format(grandTotal), fontSize = 18.sp, fontWeight = FontWeight.Bold, color = BrandBlue)
+                        }
                     }
-                } else {
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text("CGST Total (${totalTaxAmount / 2 / taxableTotal.coerceAtLeast(1.0) * 100}%):", fontSize = 13.sp)
-                        Text("₹%.2f".format(totalTaxAmount / 2), fontWeight = FontWeight.Bold)
-                    }
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text("SGST Total:", fontSize = 13.sp)
-                        Text("₹%.2f".format(totalTaxAmount / 2), fontWeight = FontWeight.Bold)
-                    }
-                }
-                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text("Grand Total:", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = BrandBlue)
-                    Text("₹%.2f".format(grandTotal), fontSize = 18.sp, fontWeight = FontWeight.Bold, color = BrandBlue)
                 }
             }
-        }
 
-        Spacer(modifier = Modifier.height(10.dp))
-
-        Button(
-            onClick = {
-                viewModel.showToast("GST Tax Invoice generated successfully! E-Way Bill Status checked ✓")
-            },
-            colors = ButtonDefaults.buttonColors(containerColor = BrandBlue),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("🖨️ Generate & Export Tax Invoice PDF", fontWeight = FontWeight.Bold)
+            // Generate Button inside LazyColumn
+            item {
+                Spacer(modifier = Modifier.height(4.dp))
+                Button(
+                    onClick = {
+                        viewModel.showToast("GST Tax Invoice generated successfully! E-Way Bill Status checked ✓")
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = BrandBlue),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("🖨️ Generate & Export Tax Invoice PDF", fontWeight = FontWeight.Bold)
+                }
+                Spacer(modifier = Modifier.height(150.dp))
+            }
         }
     }
 }
