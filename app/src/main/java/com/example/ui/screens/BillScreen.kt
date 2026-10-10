@@ -277,6 +277,15 @@ fun BillScreen(viewModel: StockViewModel) {
                             ) {
                                 Text("⚡ Start Sequential Shipment Scan", fontWeight = FontWeight.Bold)
                             }
+                            Spacer(modifier = Modifier.height(8.dp))
+                            OutlinedButton(
+                                onClick = { viewModel.openGstCalculator() },
+                                shape = RoundedCornerShape(10.dp),
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = BrandBlue)
+                            ) {
+                                Text("📊 GST & E-Way Bill Calculator", fontWeight = FontWeight.Bold)
+                            }
                         }
                     }
                 }

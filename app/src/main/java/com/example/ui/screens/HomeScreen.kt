@@ -654,31 +654,17 @@ fun HomeScreen(viewModel: StockViewModel) {
                                 Text("Tint Machine Report (.XLS / .CSV)", fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
                             }
 
-                            // GST Calculator & Smart Synonym Search Buttons
-                            Row(
+                            // GST Calculator Button
+                            Button(
+                                onClick = { viewModel.openGstCalculator() },
+                                colors = ButtonDefaults.buttonColors(containerColor = BrandBlue),
+                                shape = RoundedCornerShape(10.dp),
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(top = 8.dp),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 8.dp, horizontal = 6.dp)
                             ) {
-                                Button(
-                                    onClick = { viewModel.openGstCalculator() },
-                                    colors = ButtonDefaults.buttonColors(containerColor = BrandBlue),
-                                    shape = RoundedCornerShape(10.dp),
-                                    modifier = Modifier.weight(1f),
-                                    contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 8.dp, horizontal = 6.dp)
-                                ) {
-                                    Text("📊 GST & E-Way Calc", fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                                }
-
-                                OutlinedButton(
-                                    onClick = { viewModel.openSmartSynonymSearch() },
-                                    shape = RoundedCornerShape(10.dp),
-                                    modifier = Modifier.weight(1f),
-                                    contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 8.dp, horizontal = 6.dp)
-                                ) {
-                                    Text("🔍 Smart Synonyms", fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                                }
+                                Text("📊 GST & E-Way Calc", fontSize = 12.sp, fontWeight = FontWeight.Bold)
                             }
                         }
                     }

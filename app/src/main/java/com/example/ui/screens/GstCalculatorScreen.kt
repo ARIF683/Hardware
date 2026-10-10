@@ -45,6 +45,7 @@ data class GstInvoiceRow(
 
 @Composable
 fun GstCalculatorScreen(viewModel: StockViewModel) {
+    val allItems by viewModel.allItems.collectAsState()
     var storeGstin by remember { mutableStateOf("27AABCS1234F1Z5") }
     var customerGstin by remember { mutableStateOf("") }
     var customerName by remember { mutableStateOf("") }
@@ -217,6 +218,21 @@ fun GstCalculatorScreen(viewModel: StockViewModel) {
 
             // Invoice Row Editors
             itemsIndexed(rows) { index, row ->
+                var isSuggestionsOpen by remember { mutableStateOf(true) }
+                val matchingItems = remember(row.itemName, allItems) {
+                    val q = row.itemName.trim()
+                    if (q.isBlank()) {
+                        emptyList()
+                    } else {
+                        allItems.mapNotNull { dbItem ->
+                            val score = com.example.util.ItemSearchMatcher.matchScore(dbItem, q)
+                            if (score > 0) Pair(dbItem, score) else null
+                        }.sortedByDescending { it.second }
+                        .map { it.first }
+                        .take(15)
+                    }
+                }
+
                 Card(
                     shape = RoundedCornerShape(10.dp),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -230,8 +246,11 @@ fun GstCalculatorScreen(viewModel: StockViewModel) {
                         ) {
                             OutlinedTextField(
                                 value = row.itemName,
-                                onValueChange = { rows[index] = row.copy(itemName = it) },
-                                label = { Text("Item Name") },
+                                onValueChange = { 
+                                    rows[index] = row.copy(itemName = it)
+                                    isSuggestionsOpen = true
+                                },
+                                label = { Text("Item Name (Search DB)") },
                                 singleLine = true,
                                 modifier = Modifier.weight(2f)
                             )
@@ -247,6 +266,48 @@ fun GstCalculatorScreen(viewModel: StockViewModel) {
                                 Icon(Icons.Default.Delete, contentDescription = "Delete", tint = DangerRed)
                             }
                         }
+
+                        if (isSuggestionsOpen && matchingItems.isNotEmpty()) {
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                shadowElevation = 2.dp,
+                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.95f),
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Column(modifier = Modifier.padding(4.dp)) {
+                                    Text("💡 Matching Inventory Items:", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = BrandBlue, modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp))
+                                    matchingItems.take(5).forEach { matched ->
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .clickable {
+                                                    val displayName = if (matched.size.isNotBlank() && !matched.name.contains(matched.size, ignoreCase = true)) {
+                                                        "${matched.name} ${matched.size}"
+                                                    } else {
+                                                        matched.name
+                                                    }
+                                                    rows[index] = row.copy(
+                                                        itemName = displayName,
+                                                        rate = if (matched.price > 0.0) matched.price else row.rate
+                                                    )
+                                                    isSuggestionsOpen = false
+                                                }
+                                                .padding(horizontal = 8.dp, vertical = 6.dp),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text(matched.name + if (matched.size.isNotBlank()) " (${matched.size})" else "", fontSize = 12.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
+                                            if (matched.price > 0.0) {
+                                                Text("₹${matched.price}", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = BrandBlue)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
                         Spacer(modifier = Modifier.height(6.dp))
                         Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
                             OutlinedTextField(
