@@ -40,7 +40,8 @@ data class GstInvoiceRow(
     var hsnCode: String,
     var qty: Double,
     var rate: Double,
-    var taxRatePercent: Double // 0.0, 5.0, 12.0, 18.0, 28.0
+    var taxRatePercent: Double, // 0.0, 5.0, 12.0, 18.0, 28.0
+    var costPrice: Double = 0.0
 )
 
 @Composable
@@ -266,6 +267,15 @@ fun GstCalculatorScreen(viewModel: StockViewModel) {
                                 Icon(Icons.Default.Delete, contentDescription = "Delete", tint = DangerRed)
                             }
                         }
+                        if (row.costPrice > 0.0) {
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = "Cost Price: ₹${row.costPrice}",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = BrandBlue
+                            )
+                        }
 
                         if (isSuggestionsOpen && matchingItems.isNotEmpty()) {
                             Spacer(modifier = Modifier.height(4.dp))
@@ -290,7 +300,8 @@ fun GstCalculatorScreen(viewModel: StockViewModel) {
                                                     }
                                                     rows[index] = row.copy(
                                                         itemName = displayName,
-                                                        rate = if (matched.price > 0.0) matched.price else row.rate
+                                                        costPrice = matched.cost,
+                                                        rate = if (matched.price > 0.0) matched.price else (if (matched.cost > 0.0) matched.cost * 1.18 else row.rate)
                                                     )
                                                     isSuggestionsOpen = false
                                                 }
