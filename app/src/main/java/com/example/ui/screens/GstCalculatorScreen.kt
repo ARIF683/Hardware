@@ -15,7 +15,11 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Calculate
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.PictureAsPdf
+import androidx.compose.material.icons.filled.Print
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -23,6 +27,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -32,6 +37,8 @@ import com.example.ui.theme.BrandBlue
 import com.example.ui.theme.DangerRed
 import com.example.ui.theme.SuccessGreen
 import com.example.ui.theme.WarningAmber
+import com.example.util.InvoicePrintManager
+import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -47,6 +54,7 @@ data class GstInvoiceRow(
 
 @Composable
 fun GstCalculatorScreen(viewModel: StockViewModel) {
+    val context = LocalContext.current
     val allItems by viewModel.allItems.collectAsState()
     var storeGstin by remember { mutableStateOf("27AABCS1234F1Z5") }
     var customerGstin by remember { mutableStateOf("") }
@@ -61,6 +69,7 @@ fun GstCalculatorScreen(viewModel: StockViewModel) {
 
     var transporterId by remember { mutableStateOf("") }
     var vehicleNo by remember { mutableStateOf("") }
+    var exportedPdfInfo by remember { mutableStateOf<Pair<File, String>?>(null) }
 
     // Calculations
     val taxableTotal = rows.sumOf { it.qty * it.rate }
@@ -471,7 +480,50 @@ fun GstCalculatorScreen(viewModel: StockViewModel) {
                 Spacer(modifier = Modifier.height(4.dp))
                 Button(
                     onClick = {
-                        viewModel.showToast("GST Tax Invoice generated successfully! E-Way Bill Status checked ✓")
+                        val validRows = rows.filter { it.itemName.isNotBlank() }
+                        if (validRows.isEmpty()) {
+                            viewModel.showToast("Please enter or select at least one item first!")
+                            return@Button
+                        }
+                        try {
+                            val pdfItems = validRows.map { row ->
+                                val taxAmount = (row.qty * row.rate) * (row.taxRatePercent / 100.0)
+                                InvoicePrintManager.GstTaxPdfItem(
+                                    name = row.itemName,
+                                    hsn = row.hsnCode,
+                                    qty = row.qty,
+                                    rate = row.rate,
+                                    taxRatePercent = row.taxRatePercent,
+                                    taxableAmount = row.qty * row.rate,
+                                    taxAmount = taxAmount,
+                                    totalAmount = (row.qty * row.rate) + taxAmount
+                                )
+                            }
+                            val file = InvoicePrintManager.createGstTaxInvoicePdf(
+                                context = context,
+                                invoiceNo = invoiceNo,
+                                invoiceDate = invoiceDate,
+                                storeGstin = storeGstin,
+                                customerName = customerName,
+                                customerGstin = customerGstin,
+                                isInterState = isInterState,
+                                items = pdfItems,
+                                taxableTotal = taxableTotal,
+                                totalTaxAmount = totalTaxAmount,
+                                grandTotal = grandTotal,
+                                transporterId = transporterId,
+                                vehicleNo = vehicleNo
+                            )
+                            val cleanInvNo = invoiceNo.replace(Regex("[^a-zA-Z0-9_-]"), "_")
+                            val storagePath = InvoicePrintManager.savePdfToDownloads(
+                                context = context,
+                                sourceFile = file,
+                                displayName = "GST_Invoice_$cleanInvNo.pdf"
+                            )
+                            exportedPdfInfo = Pair(file, storagePath)
+                        } catch (e: Exception) {
+                            viewModel.showToast("Failed to generate PDF: ${e.message}")
+                        }
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = BrandBlue),
                     modifier = Modifier.fillMaxWidth()
@@ -480,6 +532,100 @@ fun GstCalculatorScreen(viewModel: StockViewModel) {
                 }
                 Spacer(modifier = Modifier.height(150.dp))
             }
+        }
+
+        // Exported PDF Location and Action Dialog
+        exportedPdfInfo?.let { (file, storagePath) ->
+            AlertDialog(
+                onDismissRequest = { exportedPdfInfo = null },
+                title = {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.PictureAsPdf, contentDescription = null, tint = DangerRed)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("PDF Exported Successfully!", fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                    }
+                },
+                text = {
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        Text(
+                            "Your GST Tax Invoice PDF has been created and saved to your device storage:",
+                            fontSize = 13.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        // Storage Location Box
+                        Card(
+                            shape = RoundedCornerShape(8.dp),
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(modifier = Modifier.padding(10.dp)) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Default.Folder, contentDescription = null, tint = BrandBlue, modifier = Modifier.size(18.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text("Storage Location:", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                }
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    storagePath,
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = BrandBlue
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    "📁 Open the 'Files' or 'Downloads' app on your phone anytime to view or move this file.",
+                                    fontSize = 11.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(14.dp))
+
+                        // Quick Actions
+                        OutlinedButton(
+                            onClick = {
+                                InvoicePrintManager.openPdf(context, file)
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(Icons.Default.PictureAsPdf, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Open / View PDF")
+                        }
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Button(
+                            onClick = {
+                                InvoicePrintManager.sharePdf(context, file, "GST Tax Invoice #$invoiceNo")
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = BrandBlue),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Share via WhatsApp / Email")
+                        }
+                        Spacer(modifier = Modifier.height(6.dp))
+                        OutlinedButton(
+                            onClick = {
+                                InvoicePrintManager.printPdf(context, file, "GST_Invoice_$invoiceNo")
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(Icons.Default.Print, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Print A4 / Save via Android Print")
+                        }
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = { exportedPdfInfo = null }) {
+                        Text("Done")
+                    }
+                }
+            )
         }
     }
 }

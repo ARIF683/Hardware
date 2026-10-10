@@ -12,9 +12,13 @@ import android.graphics.Paint
 import android.graphics.Typeface
 import android.graphics.pdf.PdfDocument
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.os.CancellationSignal
+import android.os.Environment
 import android.os.ParcelFileDescriptor
+import android.content.ContentValues
+import android.provider.MediaStore
 import android.print.PageRange
 import android.print.PrintAttributes
 import android.print.PrintDocumentAdapter
@@ -444,6 +448,298 @@ object InvoicePrintManager {
             }
         }
         printManager.print(jobName, printAdapter, PrintAttributes.Builder().build())
+    }
+
+    /**
+     * Open PDF using standard Android intent
+     */
+    fun openPdf(context: Context, file: File) {
+        try {
+            val uri: Uri = FileProvider.getUriForFile(
+                context,
+                "${context.packageName}.provider",
+                file
+            )
+            val intent = Intent(Intent.ACTION_VIEW).apply {
+                setDataAndType(uri, "application/pdf")
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(Intent.createChooser(intent, "Open PDF with").apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            })
+        } catch (e: Exception) {
+            sharePdf(context, file, file.name)
+        }
+    }
+
+    /**
+     * Copies generated PDF to device public Downloads directory
+     * Returns user-friendly file path where user can locate the PDF
+     */
+    fun savePdfToDownloads(context: Context, sourceFile: File, displayName: String): String {
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                val contentValues = ContentValues().apply {
+                    put(MediaStore.MediaColumns.DISPLAY_NAME, displayName)
+                    put(MediaStore.MediaColumns.MIME_TYPE, "application/pdf")
+                    put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
+                }
+                val resolver = context.contentResolver
+                val uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, contentValues)
+                if (uri != null) {
+                    resolver.openOutputStream(uri)?.use { out ->
+                        FileInputStream(sourceFile).use { input ->
+                            input.copyTo(out)
+                        }
+                    }
+                    return "Internal Storage > Download > $displayName"
+                }
+            } else {
+                val downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+                if (downloadsDir.exists() || downloadsDir.mkdirs()) {
+                    val destFile = File(downloadsDir, displayName)
+                    sourceFile.copyTo(destFile, overwrite = true)
+                    val mediaScanIntent = Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE)
+                    mediaScanIntent.data = Uri.fromFile(destFile)
+                    context.sendBroadcast(mediaScanIntent)
+                    return "Internal Storage > Download > $displayName"
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        return "App Storage > cache/invoices/$displayName"
+    }
+
+    data class GstTaxPdfItem(
+        val name: String,
+        val hsn: String,
+        val qty: Double,
+        val rate: Double,
+        val taxRatePercent: Double,
+        val taxableAmount: Double,
+        val taxAmount: Double,
+        val totalAmount: Double
+    )
+
+    /**
+     * Generates a compliant A4 GST Tax Invoice PDF.
+     * Note: Per GST invoice standards, internal item Cost Price is STRICTLY excluded.
+     */
+    fun createGstTaxInvoicePdf(
+        context: Context,
+        invoiceNo: String,
+        invoiceDate: String,
+        storeName: String = "HARDWARE & TOOLS STORE",
+        storeGstin: String,
+        customerName: String,
+        customerGstin: String,
+        isInterState: Boolean,
+        items: List<GstTaxPdfItem>,
+        taxableTotal: Double,
+        totalTaxAmount: Double,
+        grandTotal: Double,
+        transporterId: String = "",
+        vehicleNo: String = ""
+    ): File {
+        val pdfDoc = PdfDocument()
+        val pageInfo = PdfDocument.PageInfo.Builder(595, 842, 1).create() // A4 at 72dpi
+        val page = pdfDoc.startPage(pageInfo)
+        val canvas: Canvas = page.canvas
+
+        val paint = Paint().apply { isAntiAlias = true }
+        val titlePaint = Paint().apply {
+            isAntiAlias = true
+            textSize = 17f
+            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+            color = Color.WHITE
+        }
+        val headerSubPaint = Paint().apply {
+            isAntiAlias = true
+            textSize = 9f
+            color = Color.rgb(226, 232, 240)
+        }
+        val textPaint = Paint().apply {
+            isAntiAlias = true
+            textSize = 9f
+            color = Color.rgb(30, 41, 59)
+        }
+        val boldPaint = Paint().apply {
+            isAntiAlias = true
+            textSize = 9f
+            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+            color = Color.rgb(15, 23, 42)
+        }
+        val headerColPaint = Paint().apply {
+            isAntiAlias = true
+            textSize = 8.5f
+            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+            color = Color.WHITE
+        }
+
+        // Header Background Banner
+        val bgPaint = Paint().apply { color = Color.rgb(30, 58, 138) } // Professional Deep Navy/Blue
+        canvas.drawRect(0f, 0f, 595f, 85f, bgPaint)
+
+        // Store Title & GSTIN
+        canvas.drawText(storeName.uppercase(), 36f, 38f, titlePaint)
+        canvas.drawText("GSTIN: ${storeGstin.ifEmpty { "Unregistered" }}  •  TAX INVOICE (Rule 46 CGST Rules)", 36f, 58f, headerSubPaint)
+
+        // Invoice Meta Right-aligned
+        val docTypePaint = Paint().apply {
+            isAntiAlias = true
+            textSize = 14f
+            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+            color = Color.rgb(251, 191, 36) // Gold/Amber
+            textAlign = Paint.Align.RIGHT
+        }
+        canvas.drawText("TAX INVOICE", 559f, 38f, docTypePaint)
+        val metaPaint = Paint().apply {
+            isAntiAlias = true
+            textSize = 9f
+            color = Color.WHITE
+            textAlign = Paint.Align.RIGHT
+        }
+        canvas.drawText("Inv No: $invoiceNo", 559f, 54f, metaPaint)
+        canvas.drawText("Date: $invoiceDate", 559f, 68f, metaPaint)
+
+        var y = 105f
+
+        // Customer & Bill Details Card
+        val cardPaint = Paint().apply { color = Color.rgb(248, 250, 252) }
+        val strokePaint = Paint().apply {
+            color = Color.rgb(226, 232, 240)
+            style = Paint.Style.STROKE
+            strokeWidth = 1f
+        }
+        canvas.drawRoundRect(36f, y, 559f, y + 60f, 6f, 6f, cardPaint)
+        canvas.drawRoundRect(36f, y, 559f, y + 60f, 6f, 6f, strokePaint)
+
+        canvas.drawText("BILLED TO / RECIPIENT:", 48f, y + 18f, boldPaint)
+        canvas.drawText("Name: ${customerName.ifEmpty { "Cash / Retail Customer" }}", 48f, y + 33f, textPaint)
+        canvas.drawText("GSTIN: ${customerGstin.ifEmpty { "Unregistered" }}", 48f, y + 48f, textPaint)
+
+        val placeOfSupply = if (isInterState) "Inter-State (IGST applicable)" else "Intra-State (CGST + SGST)"
+        canvas.drawText("Place of Supply: $placeOfSupply", 320f, y + 18f, textPaint)
+        if (transporterId.isNotEmpty() || vehicleNo.isNotEmpty()) {
+            canvas.drawText("Transport ID: ${transporterId.ifEmpty { "N/A" }} | Vehicle: ${vehicleNo.ifEmpty { "N/A" }}", 320f, y + 33f, textPaint)
+        }
+        canvas.drawText("Tax Regime: ${if (isInterState) "IGST (100%)" else "CGST (50%) + SGST (50%)"}", 320f, y + 48f, textPaint)
+
+        y += 75f
+
+        // Table Header Banner
+        val tableHeaderBg = Paint().apply { color = Color.rgb(51, 65, 85) }
+        canvas.drawRoundRect(36f, y, 559f, y + 22f, 4f, 4f, tableHeaderBg)
+
+        canvas.drawText("#", 44f, y + 14f, headerColPaint)
+        canvas.drawText("ITEM DESCRIPTION", 66f, y + 14f, headerColPaint)
+        canvas.drawText("HSN", 240f, y + 14f, headerColPaint)
+        canvas.drawText("QTY", 295f, y + 14f, headerColPaint)
+        canvas.drawText("RATE", 345f, y + 14f, headerColPaint)
+        canvas.drawText("TAXABLE", 405f, y + 14f, headerColPaint)
+        canvas.drawText("GST%", 470f, y + 14f, headerColPaint)
+        val rightHeaderPaint = Paint(headerColPaint).apply { textAlign = Paint.Align.RIGHT }
+        canvas.drawText("TOTAL", 550f, y + 14f, rightHeaderPaint)
+
+        y += 24f
+
+        val linePaint = Paint().apply {
+            color = Color.rgb(241, 245, 249)
+            strokeWidth = 1f
+        }
+        val rightTextPaint = Paint(textPaint).apply { textAlign = Paint.Align.RIGHT }
+        val rightBoldPaint = Paint(boldPaint).apply { textAlign = Paint.Align.RIGHT }
+
+        // Render Rows (NO COST PRICE)
+        items.forEachIndexed { idx, item ->
+            if (y > 720f) return@forEachIndexed // safety limit for single A4 page
+
+            val rowBg = if (idx % 2 == 0) Color.WHITE else Color.rgb(248, 250, 252)
+            canvas.drawRect(36f, y, 559f, y + 20f, Paint().apply { color = rowBg })
+
+            canvas.drawText("${idx + 1}", 44f, y + 13f, textPaint)
+            val truncName = if (item.name.length > 28) item.name.take(26) + ".." else item.name
+            canvas.drawText(truncName, 66f, y + 13f, boldPaint)
+            canvas.drawText(item.hsn.ifEmpty { "-" }, 240f, y + 13f, textPaint)
+            canvas.drawText("%.1f".format(item.qty), 295f, y + 13f, textPaint)
+            canvas.drawText("₹%.2f".format(item.rate), 345f, y + 13f, textPaint)
+            canvas.drawText("₹%.2f".format(item.taxableAmount), 405f, y + 13f, textPaint)
+            canvas.drawText("${item.taxRatePercent.toInt()}%", 470f, y + 13f, textPaint)
+            canvas.drawText("₹%.2f".format(item.totalAmount), 550f, y + 13f, rightBoldPaint)
+
+            canvas.drawLine(36f, y + 20f, 559f, y + 20f, linePaint)
+            y += 21f
+        }
+
+        y += 10f
+
+        // Totals Card on bottom right
+        val totalsCardPaint = Paint().apply { color = Color.rgb(241, 245, 249) }
+        canvas.drawRoundRect(310f, y, 559f, y + 90f, 6f, 6f, totalsCardPaint)
+        canvas.drawRoundRect(310f, y, 559f, y + 90f, 6f, 6f, strokePaint)
+
+        canvas.drawText("Taxable Value Total:", 325f, y + 20f, textPaint)
+        canvas.drawText("₹%.2f".format(taxableTotal), 545f, y + 20f, rightBoldPaint)
+
+        if (isInterState) {
+            canvas.drawText("Integrated Tax (IGST):", 325f, y + 38f, textPaint)
+            canvas.drawText("₹%.2f".format(totalTaxAmount), 545f, y + 38f, rightBoldPaint)
+        } else {
+            canvas.drawText("Central Tax (CGST):", 325f, y + 35f, textPaint)
+            canvas.drawText("₹%.2f".format(totalTaxAmount / 2), 545f, y + 35f, rightBoldPaint)
+            canvas.drawText("State Tax (SGST):", 325f, y + 50f, textPaint)
+            canvas.drawText("₹%.2f".format(totalTaxAmount / 2), 545f, y + 50f, rightBoldPaint)
+        }
+
+        val grandTotalLine = y + 72f
+        canvas.drawLine(320f, grandTotalLine - 10f, 550f, grandTotalLine - 10f, strokePaint)
+        val grandTotalLabelPaint = Paint().apply {
+            isAntiAlias = true
+            textSize = 11f
+            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+            color = Color.rgb(30, 58, 138)
+        }
+        val grandTotalValPaint = Paint(grandTotalLabelPaint).apply { textAlign = Paint.Align.RIGHT }
+        canvas.drawText("TOTAL INVOICE VALUE:", 325f, grandTotalLine + 5f, grandTotalLabelPaint)
+        canvas.drawText("₹%.2f".format(grandTotal), 545f, grandTotalLine + 5f, grandTotalValPaint)
+
+        // E-Way Bill Notice / Seal
+        if (grandTotal > 50000.0) {
+            val ewayPaint = Paint().apply {
+                isAntiAlias = true
+                textSize = 9f
+                typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+                color = Color.rgb(180, 83, 9)
+            }
+            canvas.drawText("⚠️ E-Way Bill Required (> ₹50,000 threshold)", 36f, y + 25f, ewayPaint)
+            if (transporterId.isNotEmpty()) {
+                canvas.drawText("Part-A Generated with Transporter: $transporterId", 36f, y + 42f, textPaint)
+            }
+        }
+
+        // Declaration & Signatory
+        canvas.drawText("Declaration: Certified that all particulars are true and correct.", 36f, 790f, Paint().apply {
+            isAntiAlias = true; textSize = 8f; color = Color.rgb(100, 116, 139)
+        })
+        canvas.drawText("Authorized Signatory: ________________________", 559f, 790f, Paint().apply {
+            isAntiAlias = true; textSize = 8.5f; color = Color.rgb(71, 85, 105); textAlign = Paint.Align.RIGHT
+        })
+        canvas.drawText("Hardware Stock Manager • GST E-Invoice Standard", 595f / 2f, 820f, Paint().apply {
+            isAntiAlias = true; textSize = 8f; color = Color.rgb(148, 163, 184); textAlign = Paint.Align.CENTER
+        })
+
+        pdfDoc.finishPage(page)
+
+        val cleanInvNo = invoiceNo.replace(Regex("[^a-zA-Z0-9_-]"), "_")
+        val outputDir = File(context.cacheDir, "invoices").apply { mkdirs() }
+        val outputFile = File(outputDir, "GST_Invoice_$cleanInvNo.pdf")
+        FileOutputStream(outputFile).use { out ->
+            pdfDoc.writeTo(out)
+        }
+        pdfDoc.close()
+        return outputFile
     }
 
     /**
