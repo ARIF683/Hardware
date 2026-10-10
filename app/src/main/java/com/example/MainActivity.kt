@@ -284,6 +284,19 @@ fun MainAppRoot(viewModel: StockViewModel) {
                     BillScreen(viewModel = viewModel)
                 }
 
+                is CurrentScreen.GstCalculator -> {
+                    com.example.ui.screens.GstCalculatorScreen(viewModel = viewModel)
+                }
+
+                is CurrentScreen.SmartSynonymSearch -> {
+                    com.example.ui.screens.SmartSynonymSearchScreen(
+                        viewModel = viewModel,
+                        onOpenItemDetail = { itemId ->
+                            viewModel.openItemDetail(itemId)
+                        }
+                    )
+                }
+
                 is CurrentScreen.LedgerAccountDetail -> {
                     val accounts by viewModel.allLedgerAccounts.collectAsState()
                     val targetAcc = accounts.find { it.id == screen.accountId }

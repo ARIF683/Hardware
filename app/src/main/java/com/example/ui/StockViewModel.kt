@@ -40,6 +40,8 @@ sealed class CurrentScreen {
     data class ItemDetail(val itemId: String) : CurrentScreen()
     object BillFlow : CurrentScreen()
     data class LedgerAccountDetail(val accountId: String) : CurrentScreen()
+    object GstCalculator : CurrentScreen()
+    object SmartSynonymSearch : CurrentScreen()
 }
 
 enum class NavigationTab {
@@ -244,6 +246,14 @@ class StockViewModel(application: Application) : AndroidViewModel(application) {
 
     fun openBillFlow() {
         _currentScreen.value = CurrentScreen.BillFlow
+    }
+
+    fun openGstCalculator() {
+        _currentScreen.value = CurrentScreen.GstCalculator
+    }
+
+    fun openSmartSynonymSearch() {
+        _currentScreen.value = CurrentScreen.SmartSynonymSearch
     }
 
     fun navigateBack(): Boolean {

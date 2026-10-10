@@ -55,6 +55,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -651,6 +652,33 @@ fun HomeScreen(viewModel: StockViewModel) {
                                 Icon(Icons.Default.Palette, contentDescription = null, modifier = Modifier.size(15.dp), tint = BrandBlue)
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Text("Tint Machine Report (.XLS / .CSV)", fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                            }
+
+                            // GST Calculator & Smart Synonym Search Buttons
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(top = 8.dp),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Button(
+                                    onClick = { viewModel.openGstCalculator() },
+                                    colors = ButtonDefaults.buttonColors(containerColor = BrandBlue),
+                                    shape = RoundedCornerShape(10.dp),
+                                    modifier = Modifier.weight(1f),
+                                    contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 8.dp, horizontal = 6.dp)
+                                ) {
+                                    Text("📊 GST & E-Way Calc", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                }
+
+                                OutlinedButton(
+                                    onClick = { viewModel.openSmartSynonymSearch() },
+                                    shape = RoundedCornerShape(10.dp),
+                                    modifier = Modifier.weight(1f),
+                                    contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 8.dp, horizontal = 6.dp)
+                                ) {
+                                    Text("🔍 Smart Synonyms", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                }
                             }
                         }
                     }
