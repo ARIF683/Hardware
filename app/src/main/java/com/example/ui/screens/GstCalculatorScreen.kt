@@ -15,6 +15,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Calculate
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -267,14 +268,49 @@ fun GstCalculatorScreen(viewModel: StockViewModel) {
                                 Icon(Icons.Default.Delete, contentDescription = "Delete", tint = DangerRed)
                             }
                         }
-                        if (row.costPrice > 0.0) {
-                            Spacer(modifier = Modifier.height(2.dp))
-                            Text(
-                                text = "Cost Price: ₹${row.costPrice}",
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = BrandBlue
-                            )
+
+                        // Prominent Cost Price Tab / Badge (Always visible, internal reference only)
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = if (row.costPrice > 0.0) BrandBlue.copy(alpha = 0.12f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
+                            border = BorderStroke(1.dp, if (row.costPrice > 0.0) BrandBlue.copy(alpha = 0.5f) else MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        Icons.Default.Info,
+                                        contentDescription = null,
+                                        tint = if (row.costPrice > 0.0) BrandBlue else MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.size(14.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        text = "Cost Price Tab (DB Ref):",
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        text = "(Excluded from invoice)",
+                                        fontSize = 9.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                Text(
+                                    text = if (row.costPrice > 0.0) "₹%.2f".format(row.costPrice) else "— (Auto-loads on item selection)",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (row.costPrice > 0.0) BrandBlue else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
                         }
 
                         if (isSuggestionsOpen && matchingItems.isNotEmpty()) {
@@ -320,8 +356,26 @@ fun GstCalculatorScreen(viewModel: StockViewModel) {
                                                     Text(meta, fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                                 }
                                             }
-                                            if (matched.price > 0.0) {
-                                                Text("₹${matched.price}", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = BrandBlue)
+                                            Column(horizontalAlignment = Alignment.End) {
+                                                if (matched.cost > 0.0) {
+                                                    Surface(
+                                                        shape = RoundedCornerShape(4.dp),
+                                                        color = BrandBlue.copy(alpha = 0.15f),
+                                                        border = BorderStroke(0.5.dp, BrandBlue.copy(alpha = 0.4f)),
+                                                        modifier = Modifier.padding(bottom = 2.dp)
+                                                    ) {
+                                                        Text(
+                                                            text = "Cost: ₹${matched.cost}",
+                                                            fontSize = 10.sp,
+                                                            fontWeight = FontWeight.Bold,
+                                                            color = BrandBlue,
+                                                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                                                        )
+                                                    }
+                                                }
+                                                if (matched.price > 0.0) {
+                                                    Text("Sell: ₹${matched.price}", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = SuccessGreen)
+                                                }
                                             }
                                         }
                                     }
