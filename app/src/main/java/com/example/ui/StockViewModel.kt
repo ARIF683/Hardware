@@ -14,6 +14,8 @@ import com.example.data.model.LedgerAccount
 import com.example.data.model.LedgerEntry
 import com.example.data.model.QuotationRecord
 import com.example.data.pref.AppLogoStyle
+import com.example.data.pref.BankingInfo
+import com.example.data.pref.BankingPreferenceManager
 import com.example.data.pref.LogoPreferenceManager
 import com.example.data.remote.AppUpdateManager
 import com.example.data.remote.DynamicUiManager
@@ -61,6 +63,8 @@ class StockViewModel(application: Application) : AndroidViewModel(application) {
     val dynamicUiManager = DynamicUiManager(application)
     val appUpdateManager = AppUpdateManager(application)
     val logoPreferenceManager = LogoPreferenceManager(application)
+    val bankingPreferenceManager = BankingPreferenceManager(application)
+    val bankingInfo: StateFlow<BankingInfo> = bankingPreferenceManager.currentBankingInfo
 
     private val themePrefs = application.getSharedPreferences("theme_prefs", android.content.Context.MODE_PRIVATE)
     private val _customThemeColor = MutableStateFlow(themePrefs.getString("theme_color", "#4C6FFF") ?: "#4C6FFF")
@@ -823,6 +827,56 @@ class StockViewModel(application: Application) : AndroidViewModel(application) {
         items: List<com.example.util.ParsedBillItem>
     ): Boolean {
         return repository.processBillScanImport(supplierName, billNumber, items)
+    }
+
+    fun saveBankDetails(
+        bankName: String,
+        accountHolder: String,
+        accountNumber: String,
+        ifscCode: String,
+        branchName: String,
+        upiId: String
+    ) {
+        bankingPreferenceManager.saveBankDetails(
+            bankName, accountHolder, accountNumber, ifscCode, branchName, upiId
+        )
+        showToast("Banking details saved successfully!")
+    }
+
+    fun saveSignatureFromUri(uri: android.net.Uri, onResult: (Boolean) -> Unit = {}) {
+        viewModelScope.launch {
+            val res = bankingPreferenceManager.saveSignatureFromUri(uri)
+            if (res.isSuccess) {
+                showToast("Authorized signature uploaded successfully!")
+                onResult(true)
+            } else {
+                showToast("Failed to save signature: ${res.exceptionOrNull()?.message}")
+                onResult(false)
+            }
+        }
+    }
+
+    fun saveQrCodeFromUri(uri: android.net.Uri, onResult: (Boolean) -> Unit = {}) {
+        viewModelScope.launch {
+            val res = bankingPreferenceManager.saveQrCodeFromUri(uri)
+            if (res.isSuccess) {
+                showToast("Payment QR code uploaded successfully!")
+                onResult(true)
+            } else {
+                showToast("Failed to save QR code: ${res.exceptionOrNull()?.message}")
+                onResult(false)
+            }
+        }
+    }
+
+    fun clearSignature() {
+        bankingPreferenceManager.clearSignature()
+        showToast("Signature removed")
+    }
+
+    fun clearQrCode() {
+        bankingPreferenceManager.clearQrCode()
+        showToast("QR code removed")
     }
 
     companion object {

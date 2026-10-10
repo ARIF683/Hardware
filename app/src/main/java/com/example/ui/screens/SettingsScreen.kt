@@ -7,6 +7,7 @@ import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
@@ -72,8 +73,20 @@ import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material.icons.filled.UploadFile
+import androidx.compose.material.icons.filled.AccountBalance
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.DriveFileRenameOutline
+import androidx.compose.material.icons.filled.QrCode
+import androidx.compose.material.icons.filled.QrCode2
+import androidx.compose.material.icons.filled.Save
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
+import androidx.activity.result.PickVisualMediaRequest
+import coil.compose.AsyncImage
+import java.io.File
 import com.example.BuildConfig
 import com.example.data.remote.UpdateStatus
 
@@ -97,6 +110,7 @@ fun SettingsScreen(viewModel: StockViewModel) {
     val lastUiSyncedTime by viewModel.lastUiSyncedTime.collectAsState()
     val updateStatus by viewModel.updateStatus.collectAsState()
 
+    var selectedSettingsTab by remember { mutableStateOf(0) }
     var showAdminPinDialog by remember { mutableStateOf(false) }
     var showClearHistoryDialog by remember { mutableStateOf(false) }
     var showDeleteAllDialog by remember { mutableStateOf(false) }
@@ -175,9 +189,33 @@ fun SettingsScreen(viewModel: StockViewModel) {
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold
             )
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(12.dp))
+
+            TabRow(
+                selectedTabIndex = selectedSettingsTab,
+                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                contentColor = BrandBlue,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(10.dp))
+            ) {
+                Tab(
+                    selected = selectedSettingsTab == 0,
+                    onClick = { selectedSettingsTab = 0 },
+                    text = { Text("General & Data", fontWeight = FontWeight.SemiBold, fontSize = 13.sp) },
+                    icon = { Icon(Icons.Default.Settings, contentDescription = null, modifier = Modifier.size(16.dp)) }
+                )
+                Tab(
+                    selected = selectedSettingsTab == 1,
+                    onClick = { selectedSettingsTab = 1 },
+                    text = { Text("Banking & Signature", fontWeight = FontWeight.SemiBold, fontSize = 13.sp) },
+                    icon = { Icon(Icons.Default.AccountBalance, contentDescription = null, modifier = Modifier.size(16.dp)) }
+                )
+            }
+            Spacer(modifier = Modifier.height(14.dp))
         }
 
+        if (selectedSettingsTab == 0) {
         // Status rows
         item {
             SettingRow(
@@ -655,6 +693,11 @@ fun SettingsScreen(viewModel: StockViewModel) {
             )
             Spacer(modifier = Modifier.height(80.dp))
         }
+    } else {
+        item {
+            BankingAndSignatureContent(viewModel = viewModel)
+        }
+    }
     }
 
     // Admin PIN Dialog
@@ -1054,3 +1097,418 @@ private fun getFileName(context: Context, uri: android.net.Uri): String {
     }
     return result ?: "file.xlsx"
 }
+
+@Composable
+fun BankingAndSignatureContent(viewModel: StockViewModel) {
+    val context = LocalContext.current
+    val bankingInfo by viewModel.bankingInfo.collectAsState()
+
+    var bankName by remember(bankingInfo.bankName) { mutableStateOf(bankingInfo.bankName) }
+    var accountHolder by remember(bankingInfo.accountHolder) { mutableStateOf(bankingInfo.accountHolder) }
+    var accountNumber by remember(bankingInfo.accountNumber) { mutableStateOf(bankingInfo.accountNumber) }
+    var ifscCode by remember(bankingInfo.ifscCode) { mutableStateOf(bankingInfo.ifscCode) }
+    var branchName by remember(bankingInfo.branchName) { mutableStateOf(bankingInfo.branchName) }
+    var upiId by remember(bankingInfo.upiId) { mutableStateOf(bankingInfo.upiId) }
+
+    val signatureLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia()
+    ) { uri ->
+        if (uri != null) {
+            viewModel.saveSignatureFromUri(uri)
+        }
+    }
+
+    val qrLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia()
+    ) { uri ->
+        if (uri != null) {
+            viewModel.saveQrCodeFromUri(uri)
+        }
+    }
+
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        // Info Header Banner
+        Card(
+            shape = RoundedCornerShape(12.dp),
+            colors = CardDefaults.cardColors(containerColor = BrandBlue.copy(alpha = 0.1f)),
+            border = BorderStroke(1.dp, BrandBlue.copy(alpha = 0.3f))
+        ) {
+            Row(
+                modifier = Modifier.padding(14.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Surface(
+                    shape = CircleShape,
+                    color = BrandBlue,
+                    modifier = Modifier.size(42.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(Icons.Default.AccountBalance, contentDescription = null, tint = Color.White, modifier = Modifier.size(22.dp))
+                    }
+                }
+                Spacer(modifier = Modifier.width(12.dp))
+                Column {
+                    Text("GST Banking & Signature Setup", fontWeight = FontWeight.Bold, color = BrandBlue, fontSize = 15.sp)
+                    Text("Details, QR code, and signature added here will automatically appear on all GST Tax Invoices and PDF exports.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        }
+
+        // 1. Bank Account Details Card
+        Card(
+            shape = RoundedCornerShape(12.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+        ) {
+            Column(modifier = Modifier.padding(14.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.AccountBalance, contentDescription = null, tint = BrandBlue, modifier = Modifier.size(20.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Bank Account Details", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                }
+                Text("Used for receiving RTGS / NEFT / IMPS transfers from invoice buyers.", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(modifier = Modifier.height(12.dp))
+
+                OutlinedTextField(
+                    value = bankName,
+                    onValueChange = { bankName = it },
+                    label = { Text("Bank Name") },
+                    placeholder = { Text("e.g. State Bank of India, HDFC Bank, ICICI Bank") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+
+                OutlinedTextField(
+                    value = accountHolder,
+                    onValueChange = { accountHolder = it },
+                    label = { Text("Account Holder / Business Legal Name") },
+                    placeholder = { Text("e.g. HARDWARE & TOOLS STORE") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(
+                        value = accountNumber,
+                        onValueChange = { accountNumber = it },
+                        label = { Text("Account Number") },
+                        placeholder = { Text("502000xxxxxxx") },
+                        singleLine = true,
+                        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
+                        modifier = Modifier.weight(1.3f)
+                    )
+                    OutlinedTextField(
+                        value = ifscCode,
+                        onValueChange = { ifscCode = it.uppercase() },
+                        label = { Text("IFSC Code") },
+                        placeholder = { Text("SBIN0001234") },
+                        singleLine = true,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(
+                        value = branchName,
+                        onValueChange = { branchName = it },
+                        label = { Text("Branch / City") },
+                        placeholder = { Text("Main Market Branch") },
+                        singleLine = true,
+                        modifier = Modifier.weight(1f)
+                    )
+                    OutlinedTextField(
+                        value = upiId,
+                        onValueChange = { upiId = it },
+                        label = { Text("UPI ID (VPA)") },
+                        placeholder = { Text("store@okhdfcbank") },
+                        singleLine = true,
+                        modifier = Modifier.weight(1.2f)
+                    )
+                }
+                Spacer(modifier = Modifier.height(14.dp))
+
+                Button(
+                    onClick = {
+                        viewModel.saveBankDetails(bankName, accountHolder, accountNumber, ifscCode, branchName, upiId)
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = BrandBlue),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(Icons.Default.Save, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Save Bank Details", fontWeight = FontWeight.Bold)
+                }
+            }
+        }
+
+        // 2. Upload Signature Card
+        Card(
+            shape = RoundedCornerShape(12.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+        ) {
+            Column(modifier = Modifier.padding(14.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.DriveFileRenameOutline, contentDescription = null, tint = BrandBlue, modifier = Modifier.size(20.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Authorized Signature", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                }
+                Text("Upload an image of your signature. Appears in the bottom-right corner of GST invoices.", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(modifier = Modifier.height(12.dp))
+
+                val hasSig = bankingInfo.signaturePath != null && File(bankingInfo.signaturePath!!).exists()
+                if (hasSig) {
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = Color.White,
+                        border = BorderStroke(1.dp, BrandBlue.copy(alpha = 0.5f)),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(110.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize().padding(8.dp)) {
+                            AsyncImage(
+                                model = File(bankingInfo.signaturePath!!),
+                                contentDescription = "Authorized Signature Preview",
+                                contentScale = ContentScale.Fit,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        BadgePill("✓ Signature Active", SuccessGreen, Color.White)
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            OutlinedButton(
+                                onClick = {
+                                    signatureLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                                },
+                                modifier = Modifier.height(36.dp)
+                            ) {
+                                Text("Change", fontSize = 12.sp)
+                            }
+                            OutlinedButton(
+                                onClick = { viewModel.clearSignature() },
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = DangerRed),
+                                modifier = Modifier.height(36.dp)
+                            ) {
+                                Text("Remove", fontSize = 12.sp)
+                            }
+                        }
+                    }
+                } else {
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = MaterialTheme.colorScheme.surface,
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.35f)),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(90.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier.fillMaxSize(),
+                            verticalArrangement = Arrangement.Center,
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Icon(Icons.Default.DriveFileRenameOutline, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(28.dp))
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text("No signature uploaded yet", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Button(
+                        onClick = {
+                            signatureLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = BrandBlue),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(Icons.Default.UploadFile, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Upload Signature Image (Gallery)", fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+        }
+
+        // 3. Upload Payment QR Code Card
+        Card(
+            shape = RoundedCornerShape(12.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+        ) {
+            Column(modifier = Modifier.padding(14.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.QrCode2, contentDescription = null, tint = BrandBlue, modifier = Modifier.size(20.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("UPI Payment QR Code", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                }
+                Text("Upload your PhonePe, Google Pay, Paytm, or BHIM QR code. Customers can scan to pay.", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(modifier = Modifier.height(12.dp))
+
+                val hasQr = bankingInfo.qrCodePath != null && File(bankingInfo.qrCodePath!!).exists()
+                if (hasQr) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = Color.White,
+                            border = BorderStroke(1.dp, BrandBlue.copy(alpha = 0.5f)),
+                            modifier = Modifier.size(160.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize().padding(8.dp)) {
+                                AsyncImage(
+                                    model = File(bankingInfo.qrCodePath!!),
+                                    contentDescription = "Payment QR Code Preview",
+                                    contentScale = ContentScale.Fit,
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            BadgePill("✓ QR Code Active", SuccessGreen, Color.White)
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                OutlinedButton(
+                                    onClick = {
+                                        qrLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                                    },
+                                    modifier = Modifier.height(36.dp)
+                                ) {
+                                    Text("Change", fontSize = 12.sp)
+                                }
+                                OutlinedButton(
+                                    onClick = { viewModel.clearQrCode() },
+                                    colors = ButtonDefaults.outlinedButtonColors(contentColor = DangerRed),
+                                    modifier = Modifier.height(36.dp)
+                                ) {
+                                    Text("Remove", fontSize = 12.sp)
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = MaterialTheme.colorScheme.surface,
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.35f)),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(100.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier.fillMaxSize(),
+                            verticalArrangement = Arrangement.Center,
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Icon(Icons.Default.QrCode, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(32.dp))
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text("No UPI QR code uploaded yet", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Button(
+                        onClick = {
+                            qrLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = BrandBlue),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(Icons.Default.UploadFile, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Upload QR Code Image (Gallery)", fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+        }
+
+        // 4. Live Invoice Footer Preview Card
+        Card(
+            shape = RoundedCornerShape(12.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
+        ) {
+            Column(modifier = Modifier.padding(14.dp)) {
+                Text("👁️ Live GST Invoice Footer Preview", fontWeight = FontWeight.Bold, color = BrandBlue, fontSize = 13.sp)
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Surface(
+                    shape = RoundedCornerShape(6.dp),
+                    color = Color.White,
+                    border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier.padding(10.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // Left: Bank details & QR
+                        Column(modifier = Modifier.weight(1.3f)) {
+                            Text("BANK DETAILS:", fontWeight = FontWeight.Bold, fontSize = 10.sp, color = BrandBlue)
+                            Text("Bank: ${bankName.ifBlank { "Not set" }}", fontSize = 9.sp, color = Color(0xFF334155))
+                            Text("A/C: ${accountNumber.ifBlank { "Not set" }}", fontSize = 9.sp, color = Color(0xFF334155))
+                            Text("IFSC: ${ifscCode.ifBlank { "Not set" }}", fontSize = 9.sp, color = Color(0xFF334155))
+                            if (upiId.isNotBlank()) {
+                                Text("UPI: $upiId", fontSize = 9.sp, color = Color(0xFF334155))
+                            }
+                        }
+
+                        // Middle: QR Code if present
+                        if (bankingInfo.qrCodePath != null && File(bankingInfo.qrCodePath!!).exists()) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(horizontal = 6.dp)) {
+                                Surface(
+                                    shape = RoundedCornerShape(4.dp),
+                                    border = BorderStroke(0.5.dp, Color(0xFFCBD5E1)),
+                                    modifier = Modifier.size(48.dp)
+                                ) {
+                                    AsyncImage(
+                                        model = File(bankingInfo.qrCodePath!!),
+                                        contentDescription = null,
+                                        contentScale = ContentScale.Fit,
+                                        modifier = Modifier.fillMaxSize().padding(2.dp)
+                                    )
+                                }
+                                Text("Scan to Pay", fontSize = 7.sp, fontWeight = FontWeight.Bold, color = BrandBlue)
+                            }
+                        }
+
+                        // Right: Signature
+                        Column(horizontalAlignment = Alignment.End, modifier = Modifier.weight(1f)) {
+                            Text("For Store", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1E293B))
+                            Spacer(modifier = Modifier.height(4.dp))
+                            if (bankingInfo.signaturePath != null && File(bankingInfo.signaturePath!!).exists()) {
+                                AsyncImage(
+                                    model = File(bankingInfo.signaturePath!!),
+                                    contentDescription = null,
+                                    contentScale = ContentScale.Fit,
+                                    modifier = Modifier.height(28.dp).width(70.dp)
+                                )
+                            } else {
+                                Text("[No signature]", fontSize = 8.sp, color = Color.Gray)
+                            }
+                            HorizontalDivider(modifier = Modifier.width(75.dp).padding(vertical = 2.dp), color = Color(0xFF94A3B8))
+                            Text("Authorized Signatory", fontSize = 8.sp, color = Color(0xFF475569))
+                        }
+                    }
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(100.dp))
+    }
+}
+
